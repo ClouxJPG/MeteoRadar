@@ -2,103 +2,105 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Радар осадков — Европейская часть России</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Радар — Европейская Россия (реальные данные)</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             height: 100%;
-            background: #0f172a;
+            background: #0b1220;
             color: #e2e8f0;
             font-family: -apple-system, system-ui, sans-serif;
+            overflow: hidden;
         }
+
         .header {
             position: fixed;
             top: 0; left: 0; right: 0;
-            height: 52px;
-            background: rgba(15, 23, 42, 0.95);
+            height: 48px;
+            background: rgba(11, 18, 32, 0.95);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 14px;
-            z-index: 100;
-            border-bottom: 1px solid #334155;
+            padding: 0 12px;
+            z-index: 20;
+            border-bottom: 1px solid #1e293b;
         }
-        .title { font-size: 16px; font-weight: 600; }
+        .title { font-size: 15px; font-weight: 600; }
         .title span { color: #38bdf8; }
+
         .btn {
             background: #1e293b;
-            border: 1px solid #475569;
+            border: 1px solid #334155;
             color: #e2e8f0;
-            padding: 6px 12px;
+            padding: 6px 11px;
             border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
+            font-size: 13px;
         }
-        .content {
+
+        .stage {
             position: absolute;
-            top: 52px;
+            top: 48px;
             left: 0;
             right: 0;
             bottom: 0;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 12px;
-            overflow: auto;
+            background: #0b1220;
         }
-        .radar-wrap {
+
+        #radar {
             max-width: 100%;
             max-height: 100%;
-            background: #1e293b;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-        }
-        .radar-wrap img {
-            display: block;
-            max-width: 100%;
+            width: auto;
             height: auto;
+            /* Делаем пиксели чёткими, без размытия */
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            -ms-interpolation-mode: nearest-neighbor;
         }
-        .info {
-            margin-top: 12px;
-            font-size: 13px;
+
+        .footer {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            padding: 8px 12px;
+            background: rgba(11, 18, 32, 0.92);
+            font-size: 11px;
             color: #94a3b8;
             text-align: center;
-            line-height: 1.4;
-            max-width: 480px;
+            line-height: 1.35;
+            border-top: 1px solid #1e293b;
         }
-        .info a { color: #38bdf8; }
+        .footer a { color: #38bdf8; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="title">Радар <span>Европейская Россия</span></div>
-        <button class="btn" onclick="refreshRadar()">Обновить</button>
+        <div class="title">Радар <span>Европ. Россия</span></div>
+        <button class="btn" onclick="refresh()">Обновить</button>
     </div>
 
-    <div class="content">
-        <div class="radar-wrap">
-            <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар осадков">
-        </div>
-        <div class="info">
-            Реальные данные радаров Росгидромета<br>
-            (Центральная аэрологическая обсерватория)<br>
-            Последние 3 часа · Обновляется автоматически<br>
-            <a href="https://meteoinfo.ru/radanim" target="_blank">Источник</a>
-        </div>
+    <div class="stage">
+        <img id="radar" 
+             src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" 
+             alt="Реальный радар осадков">
+    </div>
+
+    <div class="footer">
+        Реальные данные радаров Росгидромета · последние 3 часа<br>
+        <a href="https://meteoinfo.ru/radanim" target="_blank">Источник: Гидрометцентр / ЦАО</a>
     </div>
 
 <script>
-    function refreshRadar() {
+    function refresh() {
         const img = document.getElementById('radar');
-        // Добавляем случайный параметр, чтобы браузер не брал из кэша
+        // Сбрасываем кэш, чтобы взять свежую GIF
         img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
     }
 
-    // Автообновление каждые 5 минут
-    setInterval(refreshRadar, 5 * 60 * 1000);
+    // Автообновление каждые 4 минуты
+    setInterval(refresh, 4 * 60 * 1000);
 </script>
 </body>
 </html>
