@@ -7,17 +7,10 @@
     <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
-            height: 100%;
-            background: #0b1220;
-            color: #e2e8f0;
-            font-family: -apple-system, system-ui, sans-serif;
-            overflow: hidden;
-        }
+        html, body { height: 100%; background: #0b1220; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
         .header {
             position: fixed; top: 0; left: 0; right: 0; height: 48px;
-            background: rgba(11,18,32,0.96);
-            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(11,18,32,0.96); display: flex; align-items: center; justify-content: space-between;
             padding: 0 10px; z-index: 30; border-bottom: 1px solid #1e293b;
         }
         .title { font-size: 15px; font-weight: 600; }
@@ -27,45 +20,39 @@
             background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
             padding: 6px 10px; border-radius: 8px; font-size: 13px;
         }
-        button:active { background: #334155; }
         button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+        button:disabled { opacity: 0.5; }
 
         .stage {
             position: absolute; top: 48px; left: 0; right: 0; bottom: 70px;
-            display: flex; align-items: center; justify-content: center;
-            background: #0b1220;
+            display: flex; align-items: center; justify-content: center; background: #0b1220;
         }
         #radar, #canvas {
             max-width: 100%; max-height: 100%;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
+            image-rendering: pixelated; image-rendering: crisp-edges;
         }
         #canvas { display: none; }
 
         .controls {
             position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
-            background: rgba(11,18,32,0.96);
-            border-top: 1px solid #1e293b;
+            background: rgba(11,18,32,0.96); border-top: 1px solid #1e293b;
             display: flex; flex-direction: column; justify-content: center;
             padding: 6px 12px; gap: 6px; z-index: 30;
         }
         .row { display: flex; align-items: center; gap: 8px; }
-        #slider {
-            flex: 1; height: 28px; accent-color: #0ea5e9;
-        }
-        #frameInfo {
-            font-size: 12px; color: #94a3b8; min-width: 70px; text-align: center;
-        }
-        .hint {
-            font-size: 11px; color: #64748b; text-align: center;
-        }
-        .loading {
+        #slider { flex: 1; height: 28px; accent-color: #0ea5e9; }
+        #frameInfo { font-size: 12px; color: #94a3b8; min-width: 70px; text-align: center; }
+        .hint { font-size: 11px; color: #64748b; text-align: center; }
+
+        .overlay {
             position: absolute; inset: 48px 0 70px 0;
-            background: rgba(11,18,32,0.85);
+            background: rgba(11,18,32,0.88);
             display: none; align-items: center; justify-content: center;
-            flex-direction: column; gap: 10px; z-index: 25;
-            font-size: 14px;
+            flex-direction: column; gap: 12px; z-index: 25; text-align: center; padding: 20px;
         }
+        .overlay.show { display: flex; }
+        .progress { width: 80%; max-width: 260px; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: #0ea5e9; transition: width 0.2s; }
     </style>
 </head>
 <body>
@@ -80,9 +67,11 @@
     <div class="stage">
         <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
         <canvas id="canvas"></canvas>
-        <div class="loading" id="loading">
-            <div>Разбираю кадры GIF…</div>
-            <div style="font-size:12px;color:#94a3b8">Это один раз, подожди 5–15 сек</div>
+
+        <div class="overlay" id="overlay">
+            <div id="statusText">Загружаю GIF…</div>
+            <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+            <div style="font-size:12px;color:#94a3b8" id="statusSub">Это может занять 10–20 секунд</div>
         </div>
     </div>
 
@@ -93,7 +82,7 @@
             <button onclick="step(1)">›</button>
             <div id="frameInfo">—</div>
         </div>
-        <div class="hint">Сначала нажми «Перемотка», чтобы листать кадры</div>
+        <div class="hint" id="hint">Нажми «Перемотка», чтобы листать кадры</div>
     </div>
 
 <script>
@@ -107,12 +96,15 @@
     const ctx = canvas.getContext('2d');
     const slider = document.getElementById('slider');
     const frameInfo = document.getElementById('frameInfo');
-    const loading = document.getElementById('loading');
+    const overlay = document.getElementById('overlay');
+    const statusText = document.getElementById('statusText');
+    const statusSub = document.getElementById('statusSub');
+    const progressBar = document.getElementById('progressBar');
     const btnScrub = document.getElementById('btnScrub');
+    const hint = document.getElementById('hint');
 
     function refresh() {
         if (scrubReady) {
-            // перезагружаем и снова разбираем
             scrubReady = false;
             frames = [];
             radar.style.display = 'block';
@@ -121,6 +113,7 @@
             frameInfo.textContent = '—';
             btnScrub.classList.remove('active');
             btnScrub.textContent = 'Перемотка';
+            hint.textContent = 'Нажми «Перемотка», чтобы листать кадры';
         }
         radar.src = GIF_URL + '?t=' + Date.now();
     }
@@ -128,19 +121,36 @@
     async function enableScrub() {
         if (scrubReady) return;
 
-        loading.style.display = 'flex';
+        overlay.classList.add('show');
         btnScrub.disabled = true;
+        statusText.textContent = 'Загружаю GIF…';
+        statusSub.textContent = 'Подожди, файл большой (~14 МБ)';
+        progressBar.style.width = '10%';
 
         try {
-            const response = await fetch(GIF_URL + '?t=' + Date.now());
+            // Пробуем загрузить
+            const response = await fetch(GIF_URL + '?t=' + Date.now(), {
+                mode: 'cors',
+                cache: 'no-store'
+            });
+
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+
+            progressBar.style.width = '40%';
+            statusText.textContent = 'Скачиваю данные…';
+
             const buffer = await response.arrayBuffer();
+            progressBar.style.width = '70%';
+            statusText.textContent = 'Разбираю кадры…';
+
             const gif = gifuct.parseGIF(buffer);
             const parsed = gifuct.decompressFrames(gif, true);
+
+            if (!parsed || parsed.length === 0) throw new Error('Кадры не найдены');
 
             frames = parsed;
             current = 0;
 
-            // Настраиваем canvas под размер первого кадра
             const first = frames[0];
             canvas.width = first.dims.width;
             canvas.height = first.dims.height;
@@ -149,20 +159,32 @@
             slider.value = 0;
             slider.disabled = false;
 
-            // Переключаемся на canvas
             radar.style.display = 'none';
             canvas.style.display = 'block';
             scrubReady = true;
+
             btnScrub.classList.add('active');
             btnScrub.textContent = 'Кадры ✓';
+            hint.textContent = 'Листай слайдер или кнопки ‹ ›';
 
             drawFrame(0);
+            progressBar.style.width = '100%';
+            statusText.textContent = 'Готово!';
+
+            setTimeout(() => overlay.classList.remove('show'), 600);
+
         } catch (e) {
-            alert('Не удалось разобрать GIF: ' + e.message);
             console.error(e);
-        } finally {
-            loading.style.display = 'none';
-            btnScrub.disabled = false;
+            statusText.textContent = 'Не удалось';
+            statusSub.innerHTML = 'Причина: ' + (e.message || 'Load failed') + 
+                '<br><br>Скорее всего сайт радара запрещает разбор GIF с других сайтов (CORS).<br>На iPhone это почти всегда так.';
+            progressBar.style.width = '0%';
+
+            // Через 4 секунды прячем оверлей
+            setTimeout(() => {
+                overlay.classList.remove('show');
+                btnScrub.disabled = false;
+            }, 4500);
         }
     }
 
@@ -171,31 +193,7 @@
         current = Math.max(0, Math.min(index, frames.length - 1));
         const frame = frames[current];
 
-        // Очищаем и рисуем
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Создаём ImageData
         const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
         imageData.data.set(frame.patch);
-        ctx.putImageData(imageData, frame.dims.left, frame.dims.top);
-
-        slider.value = current;
-        frameInfo.textContent = (current + 1) + ' / ' + frames.length;
-    }
-
-    function step(dir) {
-        if (!scrubReady) return;
-        drawFrame(current + dir);
-    }
-
-    slider.addEventListener('input', () => {
-        if (scrubReady) drawFrame(parseInt(slider.value));
-    });
-
-    // Автообновление раз в 5 минут (только если не в режиме перемотки)
-    setInterval(() => {
-        if (!scrubReady) refresh();
-    }, 5 * 60 * 1000);
-</script>
-</body>
-</html>
+        ctx.putImageData(imageData, frame.dims.left || 0
