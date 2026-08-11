@@ -3,129 +3,102 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>Радар осадков — Россия</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Радар осадков — Европейская часть России</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; background: #0f172a; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; }
+        html, body {
+            height: 100%;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: -apple-system, system-ui, sans-serif;
+        }
         .header {
-            position: fixed; top: 0; left: 0; right: 0; height: 56px;
-            background: rgba(15, 23, 42, 0.95); z-index: 1000;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 12px; border-bottom: 1px solid #334155;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 14px;
+            z-index: 100;
+            border-bottom: 1px solid #334155;
         }
         .title { font-size: 16px; font-weight: 600; }
         .title span { color: #38bdf8; }
-        #status { font-size: 13px; color: #94a3b8; text-align: center; flex: 1; padding: 0 8px; }
-        .controls { display: flex; gap: 6px; }
-        button {
-            width: 36px; height: 36px; border: 1px solid #475569; border-radius: 8px;
-            background: #1e293b; color: #fff; font-size: 16px;
+        .btn {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
         }
-        #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; }
-        #error {
-            position: fixed; top: 70px; left: 12px; right: 12px;
-            background: #7f1d1d; color: #fecaca; padding: 12px;
-            border-radius: 10px; font-size: 14px; z-index: 2000;
-            display: none; line-height: 1.4;
+        .content {
+            position: absolute;
+            top: 52px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            overflow: auto;
         }
+        .radar-wrap {
+            max-width: 100%;
+            max-height: 100%;
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .radar-wrap img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+        .info {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.4;
+            max-width: 480px;
+        }
+        .info a { color: #38bdf8; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="title">Радар <span>Россия</span></div>
-        <div id="status">Запуск...</div>
-        <div class="controls">
-            <button onclick="loadData()">↻</button>
+        <div class="title">Радар <span>Европейская Россия</span></div>
+        <button class="btn" onclick="refreshRadar()">Обновить</button>
+    </div>
+
+    <div class="content">
+        <div class="radar-wrap">
+            <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар осадков">
+        </div>
+        <div class="info">
+            Реальные данные радаров Росгидромета<br>
+            (Центральная аэрологическая обсерватория)<br>
+            Последние 3 часа · Обновляется автоматически<br>
+            <a href="https://meteoinfo.ru/radanim" target="_blank">Источник</a>
         </div>
     </div>
 
-    <div id="error"></div>
-    <div id="map"></div>
-
 <script>
-    const statusEl = document.getElementById('status');
-    const errorEl = document.getElementById('error');
-
-    function showError(msg) {
-        errorEl.style.display = 'block';
-        errorEl.innerHTML = msg;
-        statusEl.textContent = 'Ошибка';
-        console.error(msg);
+    function refreshRadar() {
+        const img = document.getElementById('radar');
+        // Добавляем случайный параметр, чтобы браузер не брал из кэша
+        img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
     }
 
-    function setStatus(text) {
-        statusEl.textContent = text;
-    }
-
-    // Проверяем, загрузился ли Leaflet
-    if (typeof L === 'undefined') {
-        showError('Не удалось загрузить Leaflet. Проверь интернет или блокировку unpkg.com');
-    } else {
-        setStatus('Leaflet OK, создаю карту...');
-        
-        try {
-            const map = L.map('map', {
-                maxZoom: 11,
-                minZoom: 3,
-                zoomControl: true
-            }).setView([61.5, 90], 4);
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© CARTO',
-                maxZoom: 19
-            }).addTo(map);
-
-            setStatus('Карта создана, загружаю радар...');
-
-            // Загружаем данные
-            function loadData() {
-                setStatus('Запрос к API...');
-                errorEl.style.display = 'none';
-
-                fetch('https://api.librewxr.net/public/weather-maps.json')
-                    .then(r => {
-                        if (!r.ok) throw new Error('HTTP ' + r.status);
-                        return r.json();
-                    })
-                    .then(data => {
-                        setStatus('Данные получены');
-                        console.log(data);
-
-                        if (!data.radar || !data.radar.past || data.radar.past.length === 0) {
-                            showError('В ответе API нет кадров радара');
-                            return;
-                        }
-
-                        const last = data.radar.past[data.radar.past.length - 1];
-                        const tileUrl = data.host + last.path + '/256/{z}/{x}/{y}/7/1_1.png';
-
-                        L.tileLayer(tileUrl, {
-                            opacity: 0.75,
-                            maxNativeZoom: 10,
-                            maxZoom: 11
-                        }).addTo(map);
-
-                        const time = new Date(last.time * 1000).toLocaleString('ru-RU', {
-                            day: '2-digit', month: '2-digit',
-                            hour: '2-digit', minute: '2-digit'
-                        });
-                        setStatus(time + ' ✓');
-                    })
-                    .catch(err => {
-                        showError('Ошибка загрузки API:<br>' + err.message);
-                    });
-            }
-
-            // Делаем функцию глобальной для кнопки
-            window.loadData = loadData;
-            loadData();
-
-        } catch (e) {
-            showError('Ошибка создания карты:<br>' + e.message);
-        }
-    }
+    // Автообновление каждые 5 минут
+    setInterval(refreshRadar, 5 * 60 * 1000);
 </script>
 </body>
 </html>
