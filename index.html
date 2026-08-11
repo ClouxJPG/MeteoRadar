@@ -4,196 +4,130 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Радар — Европейская Россия</title>
-    <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { height: 100%; background: #0b1220; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; overflow: hidden; }
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        html, body {
+            height: 100%;
+            background: #0b1220;
+            color: #e2e8f0;
+            font-family: -apple-system, system-ui, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         .header {
-            position: fixed; top: 0; left: 0; right: 0; height: 48px;
-            background: rgba(11,18,32,0.96); display: flex; align-items: center; justify-content: space-between;
-            padding: 0 10px; z-index: 30; border-bottom: 1px solid #1e293b;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 48px;
+            background: rgba(11, 18, 32, 0.96);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            z-index: 40;
+            border-bottom: 1px solid #1e293b;
         }
         .title { font-size: 15px; font-weight: 600; }
         .title span { color: #38bdf8; }
+
         .btns { display: flex; gap: 6px; }
         button {
-            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
-            padding: 6px 10px; border-radius: 8px; font-size: 13px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            width: 36px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
-        button:disabled { opacity: 0.5; }
+        button:active { background: #334155; }
 
-        .stage {
-            position: absolute; top: 48px; left: 0; right: 0; bottom: 70px;
-            display: flex; align-items: center; justify-content: center; background: #0b1220;
+        .viewport {
+            position: absolute;
+            top: 48px;
+            left: 0;
+            right: 0;
+            bottom: 56px;
+            overflow: hidden;
+            background: #0b1220;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        #radar, #canvas {
-            max-width: 100%; max-height: 100%;
-            image-rendering: pixelated; image-rendering: crisp-edges;
-        }
-        #canvas { display: none; }
 
-        .controls {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
-            background: rgba(11,18,32,0.96); border-top: 1px solid #1e293b;
-            display: flex; flex-direction: column; justify-content: center;
-            padding: 6px 12px; gap: 6px; z-index: 30;
+        #radar {
+            max-width: none;
+            max-height: none;
+            width: auto;
+            height: auto;
+            transform-origin: center center;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            -ms-interpolation-mode: nearest-neighbor;
+            will-change: transform;
+            pointer-events: none;
         }
-        .row { display: flex; align-items: center; gap: 8px; }
-        #slider { flex: 1; height: 28px; accent-color: #0ea5e9; }
-        #frameInfo { font-size: 12px; color: #94a3b8; min-width: 70px; text-align: center; }
-        .hint { font-size: 11px; color: #64748b; text-align: center; }
 
-        .overlay {
-            position: absolute; inset: 48px 0 70px 0;
-            background: rgba(11,18,32,0.88);
-            display: none; align-items: center; justify-content: center;
-            flex-direction: column; gap: 12px; z-index: 25; text-align: center; padding: 20px;
+        .footer {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 56px;
+            background: rgba(11, 18, 32, 0.96);
+            border-top: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            z-index: 40;
+            padding: 0 10px;
         }
-        .overlay.show { display: flex; }
-        .progress { width: 80%; max-width: 260px; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: #0ea5e9; transition: width 0.2s; }
+        .footer button {
+            width: auto;
+            padding: 0 12px;
+            font-size: 13px;
+            height: 34px;
+        }
+        .hint {
+            position: absolute;
+            bottom: 64px;
+            left: 0; right: 0;
+            text-align: center;
+            font-size: 11px;
+            color: #64748b;
+            pointer-events: none;
+            z-index: 30;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="title">Радар <span>Европ. Россия</span></div>
         <div class="btns">
-            <button id="btnScrub" onclick="enableScrub()">Перемотка</button>
-            <button onclick="refresh()">Обновить</button>
+            <button onclick="zoomIn()" title="Приблизить">+</button>
+            <button onclick="zoomOut()" title="Отдалить">−</button>
+            <button onclick="rotate(-90)" title="Повернуть влево">↺</button>
+            <button onclick="rotate(90)" title="Повернуть вправо">↻</button>
+            <button onclick="resetView()" title="Сбросить">⟲</button>
+            <button onclick="refresh()" title="Обновить">↻</button>
         </div>
     </div>
 
-    <div class="stage">
+    <div class="viewport" id="viewport">
         <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
-        <canvas id="canvas"></canvas>
-
-        <div class="overlay" id="overlay">
-            <div id="statusText">Загружаю GIF…</div>
-            <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
-            <div style="font-size:12px;color:#94a3b8" id="statusSub">Это может занять 10–20 секунд</div>
-        </div>
     </div>
 
-    <div class="controls">
-        <div class="row">
-            <button onclick="step(-1)">‹</button>
-            <input type="range" id="slider" min="0" max="0" value="0" disabled>
-            <button onclick="step(1)">›</button>
-            <div id="frameInfo">—</div>
-        </div>
-        <div class="hint" id="hint">Нажми «Перемотка», чтобы листать кадры</div>
+    <div class="hint">Щипок / перетаскивание · кнопки +, −, вращение</div>
+
+    <div class="footer">
+        <button onclick="zoomIn()">Приблизить</button>
+        <button onclick="zoomOut()">Отдалить</button>
+        <button onclick="resetView()">Сброс</button>
+        <button onclick="refresh()">Обновить</button>
     </div>
 
 <script>
-    const GIF_URL = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif';
-    let frames = [];
-    let current = 0;
-    let scrubReady = false;
-
-    const radar = document.getElementById('radar');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const slider = document.getElementById('slider');
-    const frameInfo = document.getElementById('frameInfo');
-    const overlay = document.getElementById('overlay');
-    const statusText = document.getElementById('statusText');
-    const statusSub = document.getElementById('statusSub');
-    const progressBar = document.getElementById('progressBar');
-    const btnScrub = document.getElementById('btnScrub');
-    const hint = document.getElementById('hint');
-
-    function refresh() {
-        if (scrubReady) {
-            scrubReady = false;
-            frames = [];
-            radar.style.display = 'block';
-            canvas.style.display = 'none';
-            slider.disabled = true;
-            frameInfo.textContent = '—';
-            btnScrub.classList.remove('active');
-            btnScrub.textContent = 'Перемотка';
-            hint.textContent = 'Нажми «Перемотка», чтобы листать кадры';
-        }
-        radar.src = GIF_URL + '?t=' + Date.now();
-    }
-
-    async function enableScrub() {
-        if (scrubReady) return;
-
-        overlay.classList.add('show');
-        btnScrub.disabled = true;
-        statusText.textContent = 'Загружаю GIF…';
-        statusSub.textContent = 'Подожди, файл большой (~14 МБ)';
-        progressBar.style.width = '10%';
-
-        try {
-            // Пробуем загрузить
-            const response = await fetch(GIF_URL + '?t=' + Date.now(), {
-                mode: 'cors',
-                cache: 'no-store'
-            });
-
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-
-            progressBar.style.width = '40%';
-            statusText.textContent = 'Скачиваю данные…';
-
-            const buffer = await response.arrayBuffer();
-            progressBar.style.width = '70%';
-            statusText.textContent = 'Разбираю кадры…';
-
-            const gif = gifuct.parseGIF(buffer);
-            const parsed = gifuct.decompressFrames(gif, true);
-
-            if (!parsed || parsed.length === 0) throw new Error('Кадры не найдены');
-
-            frames = parsed;
-            current = 0;
-
-            const first = frames[0];
-            canvas.width = first.dims.width;
-            canvas.height = first.dims.height;
-
-            slider.max = frames.length - 1;
-            slider.value = 0;
-            slider.disabled = false;
-
-            radar.style.display = 'none';
-            canvas.style.display = 'block';
-            scrubReady = true;
-
-            btnScrub.classList.add('active');
-            btnScrub.textContent = 'Кадры ✓';
-            hint.textContent = 'Листай слайдер или кнопки ‹ ›';
-
-            drawFrame(0);
-            progressBar.style.width = '100%';
-            statusText.textContent = 'Готово!';
-
-            setTimeout(() => overlay.classList.remove('show'), 600);
-
-        } catch (e) {
-            console.error(e);
-            statusText.textContent = 'Не удалось';
-            statusSub.innerHTML = 'Причина: ' + (e.message || 'Load failed') + 
-                '<br><br>Скорее всего сайт радара запрещает разбор GIF с других сайтов (CORS).<br>На iPhone это почти всегда так.';
-            progressBar.style.width = '0%';
-
-            // Через 4 секунды прячем оверлей
-            setTimeout(() => {
-                overlay.classList.remove('show');
-                btnScrub.disabled = false;
-            }, 4500);
-        }
-    }
-
-    function drawFrame(index) {
-        if (!frames.length) return;
-        current = Math.max(0, Math.min(index, frames.length - 1));
-        const frame = frames[current];
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
-        imageData.data.set(frame.patch);
-        ctx.putImageData(imageData, frame.dims.left || 0
+    const img = document.get
