@@ -2,196 +2,130 @@
 <html lang="ru">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Радар осадков — Россия</title>
-    <meta name="description" content="Интерактивный радар осадков по России в реальном времени">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #e2e8f0; }
-        
+        html, body { height: 100%; background: #0f172a; color: #e2e8f0; font-family: -apple-system, system-ui, sans-serif; }
         .header {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 56px;
-            background: rgba(15, 23, 42, 0.93);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 16px;
-            z-index: 1000;
-            border-bottom: 1px solid #334155;
+            position: fixed; top: 0; left: 0; right: 0; height: 56px;
+            background: rgba(15, 23, 42, 0.95); z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 12px; border-bottom: 1px solid #334155;
         }
-        
-        .title { font-size: 17px; font-weight: 600; }
+        .title { font-size: 16px; font-weight: 600; }
         .title span { color: #38bdf8; }
-        
-        #timestamp {
-            font-size: 14px;
-            font-weight: 500;
-            color: #94a3b8;
-            min-width: 140px;
-            text-align: center;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-        
+        #status { font-size: 13px; color: #94a3b8; text-align: center; flex: 1; padding: 0 8px; }
+        .controls { display: flex; gap: 6px; }
         button {
-            width: 38px;
-            height: 38px;
-            border: 1px solid #475569;
-            border-radius: 8px;
-            background: #1e293b;
-            color: #e2e8f0;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.15s;
+            width: 36px; height: 36px; border: 1px solid #475569; border-radius: 8px;
+            background: #1e293b; color: #fff; font-size: 16px;
         }
-        button:hover { background: #334155; border-color: #64748b; }
-        button:active { transform: scale(0.95); }
-        
-        #map {
-            position: absolute;
-            top: 56px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+        #map { position: absolute; top: 56px; left: 0; right: 0; bottom: 0; }
+        #error {
+            position: fixed; top: 70px; left: 12px; right: 12px;
+            background: #7f1d1d; color: #fecaca; padding: 12px;
+            border-radius: 10px; font-size: 14px; z-index: 2000;
+            display: none; line-height: 1.4;
         }
-        
-        .legend {
-            position: absolute;
-            bottom: 20px;
-            left: 14px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 10px 14px;
-            border-radius: 10px;
-            font-size: 12px;
-            z-index: 1000;
-            border: 1px solid #334155;
-            line-height: 1.55;
-        }
-        .legend strong { display: block; margin-bottom: 4px; color: #38bdf8; }
-        
-        .info {
-            position: absolute;
-            bottom: 20px;
-            right: 14px;
-            background: rgba(15, 23, 42, 0.9);
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 11px;
-            color: #94a3b8;
-            z-index: 1000;
-            border: 1px solid #334155;
-            max-width: 230px;
-            line-height: 1.4;
-        }
-        .info a { color: #38bdf8; text-decoration: none; }
-        .info a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-
-<div class="header">
-    <div class="title">Радар осадков <span>Россия</span></div>
-    <div id="timestamp">Загрузка...</div>
-    <div class="controls">
-        <button onclick="stop(); showFrame(animationPosition - 1);" title="Предыдущий кадр">‹</button>
-        <button id="playBtn" onclick="playStop();" title="Воспроизведение / Пауза">▶</button>
-        <button onclick="stop(); showFrame(animationPosition + 1);" title="Следующий кадр">›</button>
-        <button onclick="loadApiData();" title="Обновить данные">↻</button>
+    <div class="header">
+        <div class="title">Радар <span>Россия</span></div>
+        <div id="status">Запуск...</div>
+        <div class="controls">
+            <button onclick="loadData()">↻</button>
+        </div>
     </div>
-</div>
 
-<div id="map"></div>
-
-<div class="legend">
-    <strong>Интенсивность осадков</strong>
-    Слабые → Сильные<br>
-    <span style="color:#60a5fa">■</span> морось &nbsp;
-    <span style="color:#22c55e">■</span> умеренный &nbsp;
-    <span style="color:#eab308">■</span> сильный &nbsp;
-    <span style="color:#ef4444">■</span> ливень
-</div>
-
-<div class="info">
-    Данные: <a href="https://librewxr.net" target="_blank" rel="noopener">LibreWXR</a><br>
-    (OPERA + ECMWF, CC-BY-4.0)<br>
-    Обновление ~5–10 мин
-</div>
+    <div id="error"></div>
+    <div id="map"></div>
 
 <script>
-// === НАСТРОЙКИ ===
-const TILE_SIZE = window.devicePixelRatio >= 2 ? 512 : 256;
-const RADAR_OPACITY = 0.72;
-const ANIMATION_DELAY = 550;
-const API_URL = "https://api.librewxr.net/public/weather-maps.json";
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 минут
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
 
-// Цветовая схема (можно менять 0–12)
-// 2 = Universal Blue, 7 = Rainbow, 6 = NEXRAD и т.д.
-const COLOR_SCHEME = 7;
+    function showError(msg) {
+        errorEl.style.display = 'block';
+        errorEl.innerHTML = msg;
+        statusEl.textContent = 'Ошибка';
+        console.error(msg);
+    }
 
-// === СОСТОЯНИЕ ===
-let apiData = {};
-let mapFrames = [];
-let animationPosition = 0;
-let animationTimer = null;
-let currentLayer = null;
-let isLoading = false;
-let layerCache = {};
+    function setStatus(text) {
+        statusEl.textContent = text;
+    }
 
-// === КАРТА (центр России) ===
-const map = L.map('map', {
-    maxZoom: 11,
-    minZoom: 3,
-    zoomControl: true
-}).setView([61.5, 90], 4);
+    // Проверяем, загрузился ли Leaflet
+    if (typeof L === 'undefined') {
+        showError('Не удалось загрузить Leaflet. Проверь интернет или блокировку unpkg.com');
+    } else {
+        setStatus('Leaflet OK, создаю карту...');
+        
+        try {
+            const map = L.map('map', {
+                maxZoom: 11,
+                minZoom: 3,
+                zoomControl: true
+            }).setView([61.5, 90], 4);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap, © CARTO',
-    maxZoom: 19
-}).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© CARTO',
+                maxZoom: 19
+            }).addTo(map);
 
-// === УТИЛИТЫ ===
-function wrapPosition(pos) {
-    if (mapFrames.length === 0) return 0;
-    while (pos >= mapFrames.length) pos -= mapFrames.length;
-    while (pos < 0) pos += mapFrames.length;
-    return pos;
-}
+            setStatus('Карта создана, загружаю радар...');
 
-function formatTime(ts) {
-    const d = new Date(ts * 1000);
-    return d.toLocaleString('ru-RU', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
+            // Загружаем данные
+            function loadData() {
+                setStatus('Запрос к API...');
+                errorEl.style.display = 'none';
 
-// === СЛОИ РАДАРА (LibreWXR) ===
-function createRadarLayer(frame) {
-    // Формат: /v2/radar/{timestamp}/{size}/{z}/{x}/{y}/{color}/{smooth}_{snow}.png
-    return L.tileLayer(
-        apiData.host + frame.path + '/' + TILE_SIZE + '/{z}/{x}/{y}/' + COLOR_SCHEME + '/1_1.png',
-        {
-            tileSize: 256,
-            opacity: 0.01,
-            maxNativeZoom: 10,
-            maxZoom: 11,
-            zIndex: 10
+                fetch('https://api.librewxr.net/public/weather-maps.json')
+                    .then(r => {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(data => {
+                        setStatus('Данные получены');
+                        console.log(data);
+
+                        if (!data.radar || !data.radar.past || data.radar.past.length === 0) {
+                            showError('В ответе API нет кадров радара');
+                            return;
+                        }
+
+                        const last = data.radar.past[data.radar.past.length - 1];
+                        const tileUrl = data.host + last.path + '/256/{z}/{x}/{y}/7/1_1.png';
+
+                        L.tileLayer(tileUrl, {
+                            opacity: 0.75,
+                            maxNativeZoom: 10,
+                            maxZoom: 11
+                        }).addTo(map);
+
+                        const time = new Date(last.time * 1000).toLocaleString('ru-RU', {
+                            day: '2-digit', month: '2-digit',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+                        setStatus(time + ' ✓');
+                    })
+                    .catch(err => {
+                        showError('Ошибка загрузки API:<br>' + err.message);
+                    });
+            }
+
+            // Делаем функцию глобальной для кнопки
+            window.loadData = loadData;
+            loadData();
+
+        } catch (e) {
+            showError('Ошибка создания карты:<br>' + e.message);
         }
-    );
-}
-
-function clearLayerCache() {
-    stop();
-    for (let pos in layerCache
+    }
+</script>
+</body>
+</html>
