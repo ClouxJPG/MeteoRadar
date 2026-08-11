@@ -49,14 +49,12 @@
             bottom: 0;
             overflow: hidden;
             background: #0b1220;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         #radar {
-            max-width: none;
-            max-height: none;
+            position: absolute;
+            top: 0;
+            left: 0;
             transform-origin: 0 0;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
@@ -80,142 +78,181 @@
     const img = document.getElementById('radar');
     const viewport = document.getElementById('viewport');
 
+    // Состояние
     let scale = 1;
-    let rotation = 0;
-    let posX = 0;
-    let posY = 0;
+    let rotation = 0;   // в градусах
+    let x = 0;          // смещение
+    let y = 0;
 
-    let mode = null;
-    let startX = 0, startY = 0;
-    let startPosX = 0, startPosY = 0;
-    let startDist = 0;
-    let startAngle = 0;
-    let startScale = 1;
-    let startRotation = 0;
-    let pinchCenterX = 0, pinchCenterY = 0;
+    // Жесты
+    let pointers = new Map();   // id → {x, y}
+    let lastDist = 0;
+    let lastAngle = 0;
+    let lastMid = {x: 0, y: 0};
+    let lastScale = 1;
+    let lastRotation = 0;
+    let lastX = 0;
+    let lastY = 0;
 
     function apply() {
-        // transform-origin: 0 0 + translate + rotate + scale
-        img.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotation}deg) scale(${scale})`;
+        img.style.transform = `matrix(${scale * Math.cos(rotation * Math.PI/180)}, ${scale * Math.sin(rotation * Math.PI/180)}, ${-scale * Math.sin(rotation * Math.PI/180)}, ${scale * Math.cos(rotation * Math.PI/180)}, ${x}, ${y})`;
     }
 
     function refresh() {
         img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
     }
 
-    function getDistance(t1, t2) {
-        const dx = t1.clientX - t2.clientX;
-        const dy = t1.clientY - t2.clientY;
-        return Math.hypot(dx, dy);
+    function getDistance(p1, p2) {
+        return Math.hypot(p2.x - p1.x, p2.y - p1.y);
     }
 
-    function getAngle(t1, t2) {
-        return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+    function getAngle(p1, p2) {
+        return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
     }
 
-    function getMidpoint(t1, t2) {
-        return {
-            x: (t1.clientX + t2.clientX) / 2,
-            y: (t1.clientY + t2.clientY) / 2
-        };
+    function getMidpoint(p1, p2) {
+        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
     }
 
-    // Переводим координаты экрана в координаты внутри viewport
-    function screenToViewport(x, y) {
+    function screenToLocal(sx, sy) {
         const rect = viewport.getBoundingClientRect();
-        return {
-            x: x - rect.left,
-            y: y - rect.top
-        };
+        return { x: sx - rect.left, y: sy - rect.top };
     }
 
+    // ===== Обработка касаний =====
     viewport.addEventListener('touchstart', (e) => {
         e.preventDefault();
 
-        if (e.touches.length === 1) {
-            mode = 'pan';
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            startPosX = posX;
-            startPosY = posY;
+        for (const t of e.changedTouches) {
+            const p = screenToLocal(t.clientX, t.clientY);
+            pointers.set(t.identifier, p);
         }
-        else if (e.touches.length === 2) {
-            mode = 'pinch';
-            startDist = getDistance(e.touches[0], e.touches[1]);
-            startAngle = getAngle(e.touches[0], e.touches[1]);
-            startScale = scale;
-            startRotation = rotation;
-            startPosX = posX;
-            startPosY = posY;
 
-            const mid = getMidpoint(e.touches[0], e.touches[1]);
-            const vp = screenToViewport(mid.x, mid.y);
-            pinchCenterX = vp.x;
-            pinchCenterY = vp.y;
+        if (pointers.size === 2) {
+            const pts = [...pointers.values()];
+            lastDist = getDistance(pts[0], pts[1]);
+            lastAngle = getAngle(pts[0], pts[1]);
+            lastMid = getMidpoint(pts[0], pts[1]);
+            lastScale = scale;
+            lastRotation = rotation;
+            lastX = x;
+            lastY = y;
         }
     }, { passive: false });
 
     viewport.addEventListener('touchmove', (e) => {
         e.preventDefault();
 
-        if (mode === 'pan' && e.touches.length === 1) {
-            posX = startPosX + (e.touches[0].clientX - startX);
-            posY = startPosY + (e.touches[0].clientY - startY);
+        for (const t of e.changedTouches) {
+            const p = screenToLocal(t.clientX, t.clientY);
+            pointers.set(t.identifier, p);
+        }
+
+        if (pointers.size === 1) {
+            // Один палец — перемещение
+            const t = e.changedTouches[0];
+            const p = screenToLocal(t.clientX, t.clientY);
+            const prev = pointers.get(t.identifier);
+            // prev уже обновлён, поэтому используем разницу от предыдущего кадра через last
+            // Для простоты делаем относительное смещение
+        }
+
+        if (pointers.size === 1) {
+            // Pan
+            const pts = [...pointers.values()];
+            // Чтобы pan работал плавно, запоминаем предыдущую позицию
+            if (!viewport._lastPan) {
+                viewport._lastPan = pts[0];
+                return;
+            }
+            const dx = pts[0].x - viewport._lastPan.x;
+            const dy = pts[0].y - viewport._lastPan.y;
+            x += dx;
+            y += dy;
+            viewport._lastPan = pts[0];
             apply();
         }
-        else if (mode === 'pinch' && e.touches.length === 2) {
-            const dist = getDistance(e.touches[0], e.touches[1]);
-            const newScale = Math.min(Math.max(startScale * (dist / startDist), 0.35), 14);
+        else if (pointers.size >= 2) {
+            viewport._lastPan = null;
+            const pts = [...pointers.values()].slice(0, 2);
 
-            // Зум относительно точки между пальцами
-            const scaleRatio = newScale / startScale;
+            const dist = getDistance(pts[0], pts[1]);
+            const angle = getAngle(pts[0], pts[1]);
+            const mid = getMidpoint(pts[0], pts[1]);
 
-            // Смещение, чтобы точка под пальцами оставалась на месте
-            posX = pinchCenterX - (pinchCenterX - startPosX) * scaleRatio;
-            posY = pinchCenterY - (pinchCenterY - startPosY) * scaleRatio;
+            // Новый масштаб
+            let newScale = lastScale * (dist / lastDist);
+            newScale = Math.min(Math.max(newScale, 0.3), 16);
+
+            // Новое вращение
+            const newRotation = lastRotation + (angle - lastAngle);
+
+            // === Главное: зум и вращение относительно точки между пальцами ===
+            // 1. Переводим mid в локальные координаты изображения до трансформации
+            const cos = Math.cos(lastRotation * Math.PI / 180);
+            const sin = Math.sin(lastRotation * Math.PI / 180);
+
+            // Точка mid в системе изображения (до текущего жеста)
+            const dx = mid.x - lastX;
+            const dy = mid.y - lastY;
+            const localX = (dx * cos + dy * sin) / lastScale;
+            const localY = (-dx * sin + dy * cos) / lastScale;
+
+            // 2. Применяем новый масштаб и поворот
+            const cos2 = Math.cos(newRotation * Math.PI / 180);
+            const sin2 = Math.sin(newRotation * Math.PI / 180);
+
+            x = mid.x - (localX * newScale * cos2 - localY * newScale * sin2);
+            y = mid.y - (localX * newScale * sin2 + localY * newScale * cos2);
 
             scale = newScale;
-
-            // Вращение
-            const angle = getAngle(e.touches[0], e.touches[1]);
-            rotation = startRotation + (angle - startAngle);
+            rotation = newRotation;
 
             apply();
         }
     }, { passive: false });
 
     viewport.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) {
-            mode = null;
-        } else if (e.touches.length === 1) {
-            mode = 'pan';
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            startPosX = posX;
-            startPosY = posY;
+        for (const t of e.changedTouches) {
+            pointers.delete(t.identifier);
         }
+        viewport._lastPan = null;
+
+        // Обновляем last-значения, если осталось 2 пальца
+        if (pointers.size === 2) {
+            const pts = [...pointers.values()];
+            lastDist = getDistance(pts[0], pts[1]);
+            lastAngle = getAngle(pts[0], pts[1]);
+            lastMid = getMidpoint(pts[0], pts[1]);
+            lastScale = scale;
+            lastRotation = rotation;
+            lastX = x;
+            lastY = y;
+        }
+    });
+
+    viewport.addEventListener('touchcancel', (e) => {
+        pointers.clear();
+        viewport._lastPan = null;
     });
 
     // Автообновление
     setInterval(refresh, 4 * 60 * 1000);
 
-    // Центрируем картинку при первой загрузке
+    // Центрируем при загрузке
     img.onload = () => {
-        // Небольшая задержка, чтобы размеры успели примениться
         setTimeout(() => {
             const rect = viewport.getBoundingClientRect();
-            const imgW = img.naturalWidth || img.width;
-            const imgH = img.naturalHeight || img.height;
+            const w = img.naturalWidth;
+            const h = img.naturalHeight;
+            if (!w || !h) return;
 
-            // Начальный масштаб, чтобы картинка влезла
-            const scaleX = rect.width / imgW;
-            const scaleY = rect.height / imgH;
-            scale = Math.min(scaleX, scaleY) * 0.98;
-
-            posX = (rect.width - imgW * scale) / 2;
-            posY = (rect.height - imgH * scale) / 2;
+            scale = Math.min(rect.width / w, rect.height / h) * 0.96;
+            x = (rect.width - w * scale) / 2;
+            y = (rect.height - h * scale) / 2;
+            rotation = 0;
             apply();
-        }, 50);
+        }, 80);
     };
 
     apply();
