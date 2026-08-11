@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Радар — Европейская Россия (реальные данные)</title>
+    <title>Радар — Европейская Россия</title>
+    <script src="https://cdn.jsdelivr.net/npm/gifuct-js@2.1.2/dist/gifuct-js.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -13,94 +14,188 @@
             font-family: -apple-system, system-ui, sans-serif;
             overflow: hidden;
         }
-
         .header {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 48px;
-            background: rgba(11, 18, 32, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 12px;
-            z-index: 20;
-            border-bottom: 1px solid #1e293b;
+            position: fixed; top: 0; left: 0; right: 0; height: 48px;
+            background: rgba(11,18,32,0.96);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 10px; z-index: 30; border-bottom: 1px solid #1e293b;
         }
         .title { font-size: 15px; font-weight: 600; }
         .title span { color: #38bdf8; }
-
-        .btn {
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: #e2e8f0;
-            padding: 6px 11px;
-            border-radius: 8px;
-            font-size: 13px;
+        .btns { display: flex; gap: 6px; }
+        button {
+            background: #1e293b; border: 1px solid #334155; color: #e2e8f0;
+            padding: 6px 10px; border-radius: 8px; font-size: 13px;
         }
+        button:active { background: #334155; }
+        button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
 
         .stage {
-            position: absolute;
-            top: 48px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute; top: 48px; left: 0; right: 0; bottom: 70px;
+            display: flex; align-items: center; justify-content: center;
             background: #0b1220;
         }
-
-        #radar {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            /* Делаем пиксели чёткими, без размытия */
+        #radar, #canvas {
+            max-width: 100%; max-height: 100%;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            -ms-interpolation-mode: nearest-neighbor;
         }
+        #canvas { display: none; }
 
-        .footer {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            padding: 8px 12px;
-            background: rgba(11, 18, 32, 0.92);
-            font-size: 11px;
-            color: #94a3b8;
-            text-align: center;
-            line-height: 1.35;
+        .controls {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+            background: rgba(11,18,32,0.96);
             border-top: 1px solid #1e293b;
+            display: flex; flex-direction: column; justify-content: center;
+            padding: 6px 12px; gap: 6px; z-index: 30;
         }
-        .footer a { color: #38bdf8; text-decoration: none; }
+        .row { display: flex; align-items: center; gap: 8px; }
+        #slider {
+            flex: 1; height: 28px; accent-color: #0ea5e9;
+        }
+        #frameInfo {
+            font-size: 12px; color: #94a3b8; min-width: 70px; text-align: center;
+        }
+        .hint {
+            font-size: 11px; color: #64748b; text-align: center;
+        }
+        .loading {
+            position: absolute; inset: 48px 0 70px 0;
+            background: rgba(11,18,32,0.85);
+            display: none; align-items: center; justify-content: center;
+            flex-direction: column; gap: 10px; z-index: 25;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="title">Радар <span>Европ. Россия</span></div>
-        <button class="btn" onclick="refresh()">Обновить</button>
+        <div class="btns">
+            <button id="btnScrub" onclick="enableScrub()">Перемотка</button>
+            <button onclick="refresh()">Обновить</button>
+        </div>
     </div>
 
     <div class="stage">
-        <img id="radar" 
-             src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" 
-             alt="Реальный радар осадков">
+        <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
+        <canvas id="canvas"></canvas>
+        <div class="loading" id="loading">
+            <div>Разбираю кадры GIF…</div>
+            <div style="font-size:12px;color:#94a3b8">Это один раз, подожди 5–15 сек</div>
+        </div>
     </div>
 
-    <div class="footer">
-        Реальные данные радаров Росгидромета · последние 3 часа<br>
-        <a href="https://meteoinfo.ru/radanim" target="_blank">Источник: Гидрометцентр / ЦАО</a>
+    <div class="controls">
+        <div class="row">
+            <button onclick="step(-1)">‹</button>
+            <input type="range" id="slider" min="0" max="0" value="0" disabled>
+            <button onclick="step(1)">›</button>
+            <div id="frameInfo">—</div>
+        </div>
+        <div class="hint">Сначала нажми «Перемотка», чтобы листать кадры</div>
     </div>
 
 <script>
+    const GIF_URL = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif';
+    let frames = [];
+    let current = 0;
+    let scrubReady = false;
+
+    const radar = document.getElementById('radar');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('slider');
+    const frameInfo = document.getElementById('frameInfo');
+    const loading = document.getElementById('loading');
+    const btnScrub = document.getElementById('btnScrub');
+
     function refresh() {
-        const img = document.getElementById('radar');
-        // Сбрасываем кэш, чтобы взять свежую GIF
-        img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
+        if (scrubReady) {
+            // перезагружаем и снова разбираем
+            scrubReady = false;
+            frames = [];
+            radar.style.display = 'block';
+            canvas.style.display = 'none';
+            slider.disabled = true;
+            frameInfo.textContent = '—';
+            btnScrub.classList.remove('active');
+            btnScrub.textContent = 'Перемотка';
+        }
+        radar.src = GIF_URL + '?t=' + Date.now();
     }
 
-    // Автообновление каждые 4 минуты
-    setInterval(refresh, 4 * 60 * 1000);
+    async function enableScrub() {
+        if (scrubReady) return;
+
+        loading.style.display = 'flex';
+        btnScrub.disabled = true;
+
+        try {
+            const response = await fetch(GIF_URL + '?t=' + Date.now());
+            const buffer = await response.arrayBuffer();
+            const gif = gifuct.parseGIF(buffer);
+            const parsed = gifuct.decompressFrames(gif, true);
+
+            frames = parsed;
+            current = 0;
+
+            // Настраиваем canvas под размер первого кадра
+            const first = frames[0];
+            canvas.width = first.dims.width;
+            canvas.height = first.dims.height;
+
+            slider.max = frames.length - 1;
+            slider.value = 0;
+            slider.disabled = false;
+
+            // Переключаемся на canvas
+            radar.style.display = 'none';
+            canvas.style.display = 'block';
+            scrubReady = true;
+            btnScrub.classList.add('active');
+            btnScrub.textContent = 'Кадры ✓';
+
+            drawFrame(0);
+        } catch (e) {
+            alert('Не удалось разобрать GIF: ' + e.message);
+            console.error(e);
+        } finally {
+            loading.style.display = 'none';
+            btnScrub.disabled = false;
+        }
+    }
+
+    function drawFrame(index) {
+        if (!frames.length) return;
+        current = Math.max(0, Math.min(index, frames.length - 1));
+        const frame = frames[current];
+
+        // Очищаем и рисуем
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Создаём ImageData
+        const imageData = ctx.createImageData(frame.dims.width, frame.dims.height);
+        imageData.data.set(frame.patch);
+        ctx.putImageData(imageData, frame.dims.left, frame.dims.top);
+
+        slider.value = current;
+        frameInfo.textContent = (current + 1) + ' / ' + frames.length;
+    }
+
+    function step(dir) {
+        if (!scrubReady) return;
+        drawFrame(current + dir);
+    }
+
+    slider.addEventListener('input', () => {
+        if (scrubReady) drawFrame(parseInt(slider.value));
+    });
+
+    // Автообновление раз в 5 минут (только если не в режиме перемотки)
+    setInterval(() => {
+        if (!scrubReady) refresh();
+    }, 5 * 60 * 1000);
 </script>
 </body>
 </html>
