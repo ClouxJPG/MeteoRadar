@@ -64,6 +64,7 @@
             pointer-events: none;
         }
 
+        /* Нижний блок */
         .bottom-bar {
             position: fixed;
             left: 12px;
@@ -87,6 +88,7 @@
             margin-left: 4px;
         }
 
+        /* Легенда */
         .legend {
             position: fixed;
             top: 48px;
@@ -103,7 +105,7 @@
             backdrop-filter: blur(10px);
         }
         .legend.open {
-            max-height: 420px;
+            max-height: 340px;
             padding: 12px 14px 14px;
             opacity: 1;
             margin-top: 8px;
@@ -119,22 +121,21 @@
         .legend-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 4px 12px;
-            font-size: 12px;
+            gap: 5px 10px;
+            font-size: 11.5px;
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 7px;
             color: #cbd5e1;
-            line-height: 1.25;
         }
         .swatch {
-            width: 14px;
-            height: 14px;
+            width: 13px;
+            height: 13px;
             border-radius: 3px;
             flex-shrink: 0;
-            border: 1px solid rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.12);
         }
     </style>
 </head>
@@ -147,28 +148,28 @@
         </div>
     </div>
 
+    <!-- Легенда по официальной раскраске METEORAD -->
     <div class="legend" id="legend">
-        <div class="legend-title">Метеорадар (официальная шкала)</div>
+        <div class="legend-title">Метеорадар (ЦАО / Гидрометцентр)</div>
         <div class="legend-grid">
-            <div class="legend-item"><div class="swatch" style="background:#b0b7c0"></div>Обл. в. ср. яр.</div>
-            <div class="legend-item"><div class="swatch" style="background:#8ecae6"></div>Слоист. обл.</div>
-            <div class="legend-item"><div class="swatch" style="background:#90ee90"></div>Ос. слаб.</div>
-            <div class="legend-item"><div class="swatch" style="background:#32cd32"></div>Ос. умер.</div>
-            <div class="legend-item"><div class="swatch" style="background:#228b22"></div>Ос. сильн.</div>
-            <div class="legend-item"><div class="swatch" style="background:#ffe566"></div>Куч. обл.</div>
-            <div class="legend-item"><div class="swatch" style="background:#4fc3f7"></div>Лив. слаб.</div>
-            <div class="legend-item"><div class="swatch" style="background:#2196f3"></div>Лив. умер.</div>
-            <div class="legend-item"><div class="swatch" style="background:#0d47a1"></div>Лив. сильн.</div>
-            <div class="legend-item"><div class="swatch" style="background:#ffb74d"></div>Гроза (R)</div>
-            <div class="legend-item"><div class="swatch" style="background:#ff8a80"></div>Гроза R)</div>
-            <div class="legend-item"><div class="swatch" style="background:#e53935"></div>Гроза R</div>
-            <div class="legend-item"><div class="swatch" style="background:#ff8a50"></div>Град слаб.</div>
-            <div class="legend-item"><div class="swatch" style="background:#e07030"></div>Град умер.</div>
-            <div class="legend-item"><div class="swatch" style="background:#8d4e1a"></div>Град сильн.</div>
-            <div class="legend-item"><div class="swatch" style="background:#f48fb1"></div>Гроз+Шкв слаб.</div>
-            <div class="legend-item"><div class="swatch" style="background:#ec407a"></div>Гроз+Шкв умер.</div>
-            <div class="legend-item"><div class="swatch" style="background:#c2185b"></div>Гроз+Шкв сильн.</div>
-            <div class="legend-item"><div class="swatch" style="background:#37474f"></div>Смерч</div>
+            <div class="legend-item"><div class="swatch" style="background:#9ca3af"></div>Обл. выс. и ср. яркости</div>
+            <div class="legend-item"><div class="swatch" style="background:#7dd3fc"></div>Слоистая облачность</div>
+            <div class="legend-item"><div class="swatch" style="background:#86efac"></div>Осадки слабые</div>
+            <div class="legend-item"><div class="swatch" style="background:#22c55e"></div>Осадки умеренные</div>
+            <div class="legend-item"><div class="swatch" style="background:#15803d"></div>Осадки сильные</div>
+            <div class="legend-item"><div class="swatch" style="background:#facc15"></div>Кучевая облачность</div>
+            <div class="legend-item"><div class="swatch" style="background:#60a5fa"></div>Ливень слабый</div>
+            <div class="legend-item"><div class="swatch" style="background:#3b82f6"></div>Ливень умеренный</div>
+            <div class="legend-item"><div class="swatch" style="background:#1d4ed8"></div>Ливень сильный</div>
+            <div class="legend-item"><div class="swatch" style="background:#fb923c"></div>Гроза (R)</div>
+            <div class="legend-item"><div class="swatch" style="background:#ef4444"></div>Гроза сильная</div>
+            <div class="legend-item"><div class="swatch" style="background:#a16207"></div>Град слабый</div>
+            <div class="legend-item"><div class="swatch" style="background:#854d0e"></div>Град умеренный</div>
+            <div class="legend-item"><div class="swatch" style="background:#713f12"></div>Град сильный</div>
+            <div class="legend-item"><div class="swatch" style="background:#e879f9"></div>Гроза + шквал слаб.</div>
+            <div class="legend-item"><div class="swatch" style="background:#d946ef"></div>Гроза + шквал умер.</div>
+            <div class="legend-item"><div class="swatch" style="background:#a21caf"></div>Гроза + шквал сильн.</div>
+            <div class="legend-item"><div class="swatch" style="background:#1e293b"></div>Смерч</div>
         </div>
     </div>
 
