@@ -57,7 +57,7 @@
         #radar {
             max-width: none;
             max-height: none;
-            transform-origin: center center;
+            transform-origin: 0 0;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             -ms-interpolation-mode: nearest-neighbor;
@@ -85,16 +85,17 @@
     let posX = 0;
     let posY = 0;
 
-    // Для жестов
-    let mode = null; // 'pan' | 'pinch'
+    let mode = null;
     let startX = 0, startY = 0;
     let startPosX = 0, startPosY = 0;
     let startDist = 0;
     let startAngle = 0;
     let startScale = 1;
     let startRotation = 0;
+    let pinchCenterX = 0, pinchCenterY = 0;
 
     function apply() {
+        // transform-origin: 0 0 + translate + rotate + scale
         img.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotation}deg) scale(${scale})`;
     }
 
@@ -112,6 +113,22 @@
         return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
     }
 
+    function getMidpoint(t1, t2) {
+        return {
+            x: (t1.clientX + t2.clientX) / 2,
+            y: (t1.clientY + t2.clientY) / 2
+        };
+    }
+
+    // Переводим координаты экрана в координаты внутри viewport
+    function screenToViewport(x, y) {
+        const rect = viewport.getBoundingClientRect();
+        return {
+            x: x - rect.left,
+            y: y - rect.top
+        };
+    }
+
     viewport.addEventListener('touchstart', (e) => {
         e.preventDefault();
 
@@ -121,7 +138,7 @@
             startY = e.touches[0].clientY;
             startPosX = posX;
             startPosY = posY;
-        } 
+        }
         else if (e.touches.length === 2) {
             mode = 'pinch';
             startDist = getDistance(e.touches[0], e.touches[1]);
@@ -130,6 +147,11 @@
             startRotation = rotation;
             startPosX = posX;
             startPosY = posY;
+
+            const mid = getMidpoint(e.touches[0], e.touches[1]);
+            const vp = screenToViewport(mid.x, mid.y);
+            pinchCenterX = vp.x;
+            pinchCenterY = vp.y;
         }
     }, { passive: false });
 
@@ -140,13 +162,21 @@
             posX = startPosX + (e.touches[0].clientX - startX);
             posY = startPosY + (e.touches[0].clientY - startY);
             apply();
-        } 
+        }
         else if (mode === 'pinch' && e.touches.length === 2) {
-            // Масштаб
             const dist = getDistance(e.touches[0], e.touches[1]);
-            scale = Math.min(Math.max(startScale * (dist / startDist), 0.35), 14);
+            const newScale = Math.min(Math.max(startScale * (dist / startDist), 0.35), 14);
 
-            // Вращение двумя пальцами
+            // Зум относительно точки между пальцами
+            const scaleRatio = newScale / startScale;
+
+            // Смещение, чтобы точка под пальцами оставалась на месте
+            posX = pinchCenterX - (pinchCenterX - startPosX) * scaleRatio;
+            posY = pinchCenterY - (pinchCenterY - startPosY) * scaleRatio;
+
+            scale = newScale;
+
+            // Вращение
             const angle = getAngle(e.touches[0], e.touches[1]);
             rotation = startRotation + (angle - startAngle);
 
@@ -155,9 +185,9 @@
     }, { passive: false });
 
     viewport.addEventListener('touchend', (e) => {
-        if (e.touches.length === 0) mode = null;
-        else if (e.touches.length === 1) {
-            // Переход с двух пальцев на один
+        if (e.touches.length === 0) {
+            mode = null;
+        } else if (e.touches.length === 1) {
             mode = 'pan';
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
@@ -166,8 +196,27 @@
         }
     });
 
-    // Автообновление каждые 4 минуты
+    // Автообновление
     setInterval(refresh, 4 * 60 * 1000);
+
+    // Центрируем картинку при первой загрузке
+    img.onload = () => {
+        // Небольшая задержка, чтобы размеры успели примениться
+        setTimeout(() => {
+            const rect = viewport.getBoundingClientRect();
+            const imgW = img.naturalWidth || img.width;
+            const imgH = img.naturalHeight || img.height;
+
+            // Начальный масштаб, чтобы картинка влезла
+            const scaleX = rect.width / imgW;
+            const scaleY = rect.height / imgH;
+            scale = Math.min(scaleX, scaleY) * 0.98;
+
+            posX = (rect.width - imgW * scale) / 2;
+            posY = (rect.height - imgH * scale) / 2;
+            apply();
+        }, 50);
+    };
 
     apply();
 </script>
