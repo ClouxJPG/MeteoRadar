@@ -24,22 +24,24 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 14px;
-            z-index: 40;
+            padding: 0 12px;
+            z-index: 50;
             border-bottom: 1px solid #1e293b;
         }
         .title { font-size: 15px; font-weight: 600; }
         .title span { color: #38bdf8; }
 
+        .header-btns { display: flex; gap: 8px; }
         button {
             background: #1e293b;
             border: 1px solid #334155;
             color: #e2e8f0;
-            padding: 6px 14px;
+            padding: 6px 12px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
         }
         button:active { background: #334155; }
+        button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
 
         .viewport {
             position: absolute;
@@ -61,43 +63,130 @@
             will-change: transform;
             pointer-events: none;
         }
+
+        /* Нижний блок с временем */
+        .bottom-bar {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: 14px;
+            height: 40px;
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            color: #94a3b8;
+            z-index: 45;
+            backdrop-filter: blur(8px);
+        }
+        .bottom-bar strong {
+            color: #e2e8f0;
+            font-weight: 500;
+            margin-left: 4px;
+        }
+
+        /* Легенда — выезжает сверху */
+        .legend {
+            position: fixed;
+            top: 48px;
+            left: 12px;
+            right: 12px;
+            max-height: 0;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            z-index: 48;
+            transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.2s ease;
+            opacity: 0;
+            backdrop-filter: blur(10px);
+        }
+        .legend.open {
+            max-height: 220px;
+            padding: 12px 14px;
+            opacity: 1;
+            margin-top: 8px;
+        }
+
+        .legend-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #38bdf8;
+            margin-bottom: 10px;
+        }
+
+        .legend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px 12px;
+            font-size: 12px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #cbd5e1;
+        }
+        .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="title">Радар <span>Европ. Россия</span></div>
-        <button onclick="refresh()">Обновить</button>
+        <div class="header-btns">
+            <button id="btnLegend" onclick="toggleLegend()">Легенда</button>
+            <button onclick="refresh()">Обновить</button>
+        </div>
+    </div>
+
+    <!-- Легенда -->
+    <div class="legend" id="legend">
+        <div class="legend-title">Интенсивность явлений</div>
+        <div class="legend-grid">
+            <div class="legend-item"><div class="swatch" style="background:#a3e635"></div>Слабые осадки</div>
+            <div class="legend-item"><div class="swatch" style="background:#22c55e"></div>Умеренные осадки</div>
+            <div class="legend-item"><div class="swatch" style="background:#16a34a"></div>Сильные осадки</div>
+            <div class="legend-item"><div class="swatch" style="background:#3b82f6"></div>Ливень слабый</div>
+            <div class="legend-item"><div class="swatch" style="background:#2563eb"></div>Ливень умеренный</div>
+            <div class="legend-item"><div class="swatch" style="background:#1d4ed8"></div>Ливень сильный</div>
+            <div class="legend-item"><div class="swatch" style="background:#f97316"></div>Гроза</div>
+            <div class="legend-item"><div class="swatch" style="background:#ef4444"></div>Гроза сильная</div>
+            <div class="legend-item"><div class="swatch" style="background:#a855f7"></div>Град / гроза+ливень</div>
+            <div class="legend-item"><div class="swatch" style="background:#64748b"></div>Облачность</div>
+        </div>
     </div>
 
     <div class="viewport" id="viewport">
         <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
     </div>
 
+    <!-- Нижний блок -->
+    <div class="bottom-bar">
+        Обновлено:<strong id="updateTime">—</strong>
+    </div>
+
 <script>
     const img = document.getElementById('radar');
     const viewport = document.getElementById('viewport');
+    const legend = document.getElementById('legend');
+    const btnLegend = document.getElementById('btnLegend');
+    const updateTimeEl = document.getElementById('updateTime');
 
-    // Текущее состояние картинки
-    let scale = 1;
-    let rotation = 0; // градусы
-    let tx = 0;
-    let ty = 0;
-
-    // Для жеста двумя пальцами
-    let active = false;
-    let startScale = 1;
-    let startRotation = 0;
-    let startTx = 0;
-    let startTy = 0;
-    let startDist = 0;
-    let startAngle = 0;
-    let focalX = 0; // точка между пальцами в координатах viewport (фиксируется при начале жеста)
-    let focalY = 0;
-
-    // Для одного пальца
-    let panning = false;
-    let lastPanX = 0;
-    let lastPanY = 0;
+    let scale = 1, rotation = 0, tx = 0, ty = 0;
+    let active = false, panning = false;
+    let startScale = 1, startRotation = 0, startTx = 0, startTy = 0;
+    let startDist = 0, startAngle = 0, focalX = 0, focalY = 0;
+    let lastPanX = 0, lastPanY = 0;
+    let legendOpen = false;
 
     function apply() {
         const rad = rotation * Math.PI / 180;
@@ -106,52 +195,51 @@
         img.style.transform = `matrix(${a}, ${b}, ${-b}, ${a}, ${tx}, ${ty})`;
     }
 
+    function formatTime(date) {
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        return h + ':' + m;
+    }
+
+    function setUpdateTime() {
+        updateTimeEl.textContent = formatTime(new Date());
+    }
+
     function refresh() {
         img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
+        setUpdateTime();
+    }
+
+    function toggleLegend() {
+        legendOpen = !legendOpen;
+        legend.classList.toggle('open', legendOpen);
+        btnLegend.classList.toggle('active', legendOpen);
     }
 
     function getPoint(touch) {
         const rect = viewport.getBoundingClientRect();
-        return {
-            x: touch.clientX - rect.left,
-            y: touch.clientY - rect.top
-        };
+        return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
     }
-
-    function distance(p1, p2) {
-        return Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    }
-
-    function angle(p1, p2) {
-        return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
-    }
+    function distance(p1, p2) { return Math.hypot(p2.x - p1.x, p2.y - p1.y); }
+    function angle(p1, p2) { return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI; }
 
     viewport.addEventListener('touchstart', function (e) {
         e.preventDefault();
-
         if (e.touches.length === 1) {
-            // Один палец — начинаем перемещение
             active = false;
             panning = true;
             const p = getPoint(e.touches[0]);
             lastPanX = p.x;
             lastPanY = p.y;
-        }
-        else if (e.touches.length === 2) {
-            // Два пальца — фиксируем точку между ними
+        } else if (e.touches.length === 2) {
             panning = false;
             active = true;
-
             const p1 = getPoint(e.touches[0]);
             const p2 = getPoint(e.touches[1]);
-
-            // Фиксируем фокус (середина между пальцами)
             focalX = (p1.x + p2.x) / 2;
             focalY = (p1.y + p2.y) / 2;
-
             startDist = distance(p1, p2);
             startAngle = angle(p1, p2);
-
             startScale = scale;
             startRotation = rotation;
             startTx = tx;
@@ -161,7 +249,6 @@
 
     viewport.addEventListener('touchmove', function (e) {
         e.preventDefault();
-
         if (panning && e.touches.length === 1) {
             const p = getPoint(e.touches[0]);
             tx += p.x - lastPanX;
@@ -171,58 +258,36 @@
             apply();
             return;
         }
-
         if (active && e.touches.length === 2) {
             const p1 = getPoint(e.touches[0]);
             const p2 = getPoint(e.touches[1]);
-
             const newDist = distance(p1, p2);
             const newAngle = angle(p1, p2);
-
-            // Новый масштаб и угол
             let newScale = startScale * (newDist / startDist);
             newScale = Math.max(0.25, Math.min(newScale, 18));
-
             const newRotation = startRotation + (newAngle - startAngle);
 
-            // === Сохраняем точку фокуса неподвижной ===
-            // 1. Находим, какая точка изображения находилась под focal в начале жеста
             const rad0 = startRotation * Math.PI / 180;
-            const cos0 = Math.cos(rad0);
-            const sin0 = Math.sin(rad0);
-
-            // Вектор от startTx/Ty до фокуса
-            const dx = focalX - startTx;
-            const dy = focalY - startTy;
-
-            // Переводим в локальные координаты изображения
-            const localX = ( dx * cos0 + dy * sin0) / startScale;
+            const cos0 = Math.cos(rad0), sin0 = Math.sin(rad0);
+            const dx = focalX - startTx, dy = focalY - startTy;
+            const localX = (dx * cos0 + dy * sin0) / startScale;
             const localY = (-dx * sin0 + dy * cos0) / startScale;
 
-            // 2. Применяем новый поворот и масштаб, оставляя эту локальную точку под тем же focal
             const rad1 = newRotation * Math.PI / 180;
-            const cos1 = Math.cos(rad1);
-            const sin1 = Math.sin(rad1);
-
+            const cos1 = Math.cos(rad1), sin1 = Math.sin(rad1);
             tx = focalX - (localX * newScale * cos1 - localY * newScale * sin1);
             ty = focalY - (localX * newScale * sin1 + localY * newScale * cos1);
 
             scale = newScale;
             rotation = newRotation;
-
             apply();
         }
     }, { passive: false });
 
     viewport.addEventListener('touchend', function (e) {
-        if (e.touches.length < 2) {
-            active = false;
-        }
-        if (e.touches.length === 0) {
-            panning = false;
-        }
+        if (e.touches.length < 2) active = false;
+        if (e.touches.length === 0) panning = false;
         if (e.touches.length === 1) {
-            // Перешли с двух пальцев на один
             panning = true;
             const p = getPoint(e.touches[0]);
             lastPanX = p.x;
@@ -238,14 +303,12 @@
     // Автообновление
     setInterval(refresh, 4 * 60 * 1000);
 
-    // Центрирование при загрузке
     img.onload = function () {
+        setUpdateTime();
         setTimeout(function () {
             const rect = viewport.getBoundingClientRect();
-            const w = img.naturalWidth;
-            const h = img.naturalHeight;
+            const w = img.naturalWidth, h = img.naturalHeight;
             if (!w || !h) return;
-
             scale = Math.min(rect.width / w, rect.height / h) * 0.95;
             tx = (rect.width - w * scale) / 2;
             ty = (rect.height - h * scale) / 2;
@@ -254,6 +317,7 @@
         }, 60);
     };
 
+    setUpdateTime();
     apply();
 </script>
 </body>
