@@ -20,29 +20,24 @@
             position: fixed;
             top: 0; left: 0; right: 0;
             height: 48px;
-            background: rgba(11, 18, 32, 0.96);
+            background: rgba(11, 18, 32, 0.95);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 10px;
+            padding: 0 14px;
             z-index: 40;
             border-bottom: 1px solid #1e293b;
         }
         .title { font-size: 15px; font-weight: 600; }
         .title span { color: #38bdf8; }
 
-        .btns { display: flex; gap: 6px; }
         button {
             background: #1e293b;
             border: 1px solid #334155;
             color: #e2e8f0;
-            width: 36px;
-            height: 32px;
+            padding: 6px 14px;
             border-radius: 8px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 14px;
         }
         button:active { background: #334155; }
 
@@ -51,7 +46,7 @@
             top: 48px;
             left: 0;
             right: 0;
-            bottom: 56px;
+            bottom: 0;
             overflow: hidden;
             background: #0b1220;
             display: flex;
@@ -62,8 +57,6 @@
         #radar {
             max-width: none;
             max-height: none;
-            width: auto;
-            height: auto;
             transform-origin: center center;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
@@ -71,63 +64,112 @@
             will-change: transform;
             pointer-events: none;
         }
-
-        .footer {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 56px;
-            background: rgba(11, 18, 32, 0.96);
-            border-top: 1px solid #1e293b;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            z-index: 40;
-            padding: 0 10px;
-        }
-        .footer button {
-            width: auto;
-            padding: 0 12px;
-            font-size: 13px;
-            height: 34px;
-        }
-        .hint {
-            position: absolute;
-            bottom: 64px;
-            left: 0; right: 0;
-            text-align: center;
-            font-size: 11px;
-            color: #64748b;
-            pointer-events: none;
-            z-index: 30;
-        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="title">Радар <span>Европ. Россия</span></div>
-        <div class="btns">
-            <button onclick="zoomIn()" title="Приблизить">+</button>
-            <button onclick="zoomOut()" title="Отдалить">−</button>
-            <button onclick="rotate(-90)" title="Повернуть влево">↺</button>
-            <button onclick="rotate(90)" title="Повернуть вправо">↻</button>
-            <button onclick="resetView()" title="Сбросить">⟲</button>
-            <button onclick="refresh()" title="Обновить">↻</button>
-        </div>
+        <button onclick="refresh()">Обновить</button>
     </div>
 
     <div class="viewport" id="viewport">
         <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
     </div>
 
-    <div class="hint">Щипок / перетаскивание · кнопки +, −, вращение</div>
-
-    <div class="footer">
-        <button onclick="zoomIn()">Приблизить</button>
-        <button onclick="zoomOut()">Отдалить</button>
-        <button onclick="resetView()">Сброс</button>
-        <button onclick="refresh()">Обновить</button>
-    </div>
-
 <script>
-    const img = document.get
+    const img = document.getElementById('radar');
+    const viewport = document.getElementById('viewport');
+
+    let scale = 1;
+    let rotation = 0;
+    let posX = 0;
+    let posY = 0;
+
+    // Для жестов
+    let mode = null; // 'pan' | 'pinch'
+    let startX = 0, startY = 0;
+    let startPosX = 0, startPosY = 0;
+    let startDist = 0;
+    let startAngle = 0;
+    let startScale = 1;
+    let startRotation = 0;
+
+    function apply() {
+        img.style.transform = `translate(${posX}px, ${posY}px) rotate(${rotation}deg) scale(${scale})`;
+    }
+
+    function refresh() {
+        img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
+    }
+
+    function getDistance(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.hypot(dx, dy);
+    }
+
+    function getAngle(t1, t2) {
+        return Math.atan2(t2.clientY - t1.clientY, t2.clientX - t1.clientX) * 180 / Math.PI;
+    }
+
+    viewport.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+
+        if (e.touches.length === 1) {
+            mode = 'pan';
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startPosX = posX;
+            startPosY = posY;
+        } 
+        else if (e.touches.length === 2) {
+            mode = 'pinch';
+            startDist = getDistance(e.touches[0], e.touches[1]);
+            startAngle = getAngle(e.touches[0], e.touches[1]);
+            startScale = scale;
+            startRotation = rotation;
+            startPosX = posX;
+            startPosY = posY;
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+
+        if (mode === 'pan' && e.touches.length === 1) {
+            posX = startPosX + (e.touches[0].clientX - startX);
+            posY = startPosY + (e.touches[0].clientY - startY);
+            apply();
+        } 
+        else if (mode === 'pinch' && e.touches.length === 2) {
+            // Масштаб
+            const dist = getDistance(e.touches[0], e.touches[1]);
+            scale = Math.min(Math.max(startScale * (dist / startDist), 0.35), 14);
+
+            // Вращение двумя пальцами
+            const angle = getAngle(e.touches[0], e.touches[1]);
+            rotation = startRotation + (angle - startAngle);
+
+            apply();
+        }
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) mode = null;
+        else if (e.touches.length === 1) {
+            // Переход с двух пальцев на один
+            mode = 'pan';
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startPosX = posX;
+            startPosY = posY;
+        }
+    });
+
+    // Автообновление каждые 4 минуты
+    setInterval(refresh, 4 * 60 * 1000);
+
+    apply();
+</script>
+</body>
+</html>
