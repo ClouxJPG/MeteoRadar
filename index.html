@@ -58,7 +58,6 @@
             transform-origin: 0 0;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
-            -ms-interpolation-mode: nearest-neighbor;
             will-change: transform;
             pointer-events: none;
         }
@@ -78,132 +77,135 @@
     const img = document.getElementById('radar');
     const viewport = document.getElementById('viewport');
 
-    // Состояние
+    // Текущее состояние картинки
     let scale = 1;
-    let rotation = 0;   // в градусах
-    let x = 0;          // смещение
-    let y = 0;
+    let rotation = 0; // градусы
+    let tx = 0;
+    let ty = 0;
 
-    // Жесты
-    let pointers = new Map();   // id → {x, y}
-    let lastDist = 0;
-    let lastAngle = 0;
-    let lastMid = {x: 0, y: 0};
-    let lastScale = 1;
-    let lastRotation = 0;
-    let lastX = 0;
-    let lastY = 0;
+    // Для жеста двумя пальцами
+    let active = false;
+    let startScale = 1;
+    let startRotation = 0;
+    let startTx = 0;
+    let startTy = 0;
+    let startDist = 0;
+    let startAngle = 0;
+    let focalX = 0; // точка между пальцами в координатах viewport (фиксируется при начале жеста)
+    let focalY = 0;
+
+    // Для одного пальца
+    let panning = false;
+    let lastPanX = 0;
+    let lastPanY = 0;
 
     function apply() {
-        img.style.transform = `matrix(${scale * Math.cos(rotation * Math.PI/180)}, ${scale * Math.sin(rotation * Math.PI/180)}, ${-scale * Math.sin(rotation * Math.PI/180)}, ${scale * Math.cos(rotation * Math.PI/180)}, ${x}, ${y})`;
+        const rad = rotation * Math.PI / 180;
+        const a = scale * Math.cos(rad);
+        const b = scale * Math.sin(rad);
+        img.style.transform = `matrix(${a}, ${b}, ${-b}, ${a}, ${tx}, ${ty})`;
     }
 
     function refresh() {
         img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
     }
 
-    function getDistance(p1, p2) {
+    function getPoint(touch) {
+        const rect = viewport.getBoundingClientRect();
+        return {
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top
+        };
+    }
+
+    function distance(p1, p2) {
         return Math.hypot(p2.x - p1.x, p2.y - p1.y);
     }
 
-    function getAngle(p1, p2) {
+    function angle(p1, p2) {
         return Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180 / Math.PI;
     }
 
-    function getMidpoint(p1, p2) {
-        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-    }
-
-    function screenToLocal(sx, sy) {
-        const rect = viewport.getBoundingClientRect();
-        return { x: sx - rect.left, y: sy - rect.top };
-    }
-
-    // ===== Обработка касаний =====
-    viewport.addEventListener('touchstart', (e) => {
+    viewport.addEventListener('touchstart', function (e) {
         e.preventDefault();
 
-        for (const t of e.changedTouches) {
-            const p = screenToLocal(t.clientX, t.clientY);
-            pointers.set(t.identifier, p);
+        if (e.touches.length === 1) {
+            // Один палец — начинаем перемещение
+            active = false;
+            panning = true;
+            const p = getPoint(e.touches[0]);
+            lastPanX = p.x;
+            lastPanY = p.y;
         }
+        else if (e.touches.length === 2) {
+            // Два пальца — фиксируем точку между ними
+            panning = false;
+            active = true;
 
-        if (pointers.size === 2) {
-            const pts = [...pointers.values()];
-            lastDist = getDistance(pts[0], pts[1]);
-            lastAngle = getAngle(pts[0], pts[1]);
-            lastMid = getMidpoint(pts[0], pts[1]);
-            lastScale = scale;
-            lastRotation = rotation;
-            lastX = x;
-            lastY = y;
+            const p1 = getPoint(e.touches[0]);
+            const p2 = getPoint(e.touches[1]);
+
+            // Фиксируем фокус (середина между пальцами)
+            focalX = (p1.x + p2.x) / 2;
+            focalY = (p1.y + p2.y) / 2;
+
+            startDist = distance(p1, p2);
+            startAngle = angle(p1, p2);
+
+            startScale = scale;
+            startRotation = rotation;
+            startTx = tx;
+            startTy = ty;
         }
     }, { passive: false });
 
-    viewport.addEventListener('touchmove', (e) => {
+    viewport.addEventListener('touchmove', function (e) {
         e.preventDefault();
 
-        for (const t of e.changedTouches) {
-            const p = screenToLocal(t.clientX, t.clientY);
-            pointers.set(t.identifier, p);
-        }
-
-        if (pointers.size === 1) {
-            // Один палец — перемещение
-            const t = e.changedTouches[0];
-            const p = screenToLocal(t.clientX, t.clientY);
-            const prev = pointers.get(t.identifier);
-            // prev уже обновлён, поэтому используем разницу от предыдущего кадра через last
-            // Для простоты делаем относительное смещение
-        }
-
-        if (pointers.size === 1) {
-            // Pan
-            const pts = [...pointers.values()];
-            // Чтобы pan работал плавно, запоминаем предыдущую позицию
-            if (!viewport._lastPan) {
-                viewport._lastPan = pts[0];
-                return;
-            }
-            const dx = pts[0].x - viewport._lastPan.x;
-            const dy = pts[0].y - viewport._lastPan.y;
-            x += dx;
-            y += dy;
-            viewport._lastPan = pts[0];
+        if (panning && e.touches.length === 1) {
+            const p = getPoint(e.touches[0]);
+            tx += p.x - lastPanX;
+            ty += p.y - lastPanY;
+            lastPanX = p.x;
+            lastPanY = p.y;
             apply();
+            return;
         }
-        else if (pointers.size >= 2) {
-            viewport._lastPan = null;
-            const pts = [...pointers.values()].slice(0, 2);
 
-            const dist = getDistance(pts[0], pts[1]);
-            const angle = getAngle(pts[0], pts[1]);
-            const mid = getMidpoint(pts[0], pts[1]);
+        if (active && e.touches.length === 2) {
+            const p1 = getPoint(e.touches[0]);
+            const p2 = getPoint(e.touches[1]);
 
-            // Новый масштаб
-            let newScale = lastScale * (dist / lastDist);
-            newScale = Math.min(Math.max(newScale, 0.3), 16);
+            const newDist = distance(p1, p2);
+            const newAngle = angle(p1, p2);
 
-            // Новое вращение
-            const newRotation = lastRotation + (angle - lastAngle);
+            // Новый масштаб и угол
+            let newScale = startScale * (newDist / startDist);
+            newScale = Math.max(0.25, Math.min(newScale, 18));
 
-            // === Главное: зум и вращение относительно точки между пальцами ===
-            // 1. Переводим mid в локальные координаты изображения до трансформации
-            const cos = Math.cos(lastRotation * Math.PI / 180);
-            const sin = Math.sin(lastRotation * Math.PI / 180);
+            const newRotation = startRotation + (newAngle - startAngle);
 
-            // Точка mid в системе изображения (до текущего жеста)
-            const dx = mid.x - lastX;
-            const dy = mid.y - lastY;
-            const localX = (dx * cos + dy * sin) / lastScale;
-            const localY = (-dx * sin + dy * cos) / lastScale;
+            // === Сохраняем точку фокуса неподвижной ===
+            // 1. Находим, какая точка изображения находилась под focal в начале жеста
+            const rad0 = startRotation * Math.PI / 180;
+            const cos0 = Math.cos(rad0);
+            const sin0 = Math.sin(rad0);
 
-            // 2. Применяем новый масштаб и поворот
-            const cos2 = Math.cos(newRotation * Math.PI / 180);
-            const sin2 = Math.sin(newRotation * Math.PI / 180);
+            // Вектор от startTx/Ty до фокуса
+            const dx = focalX - startTx;
+            const dy = focalY - startTy;
 
-            x = mid.x - (localX * newScale * cos2 - localY * newScale * sin2);
-            y = mid.y - (localX * newScale * sin2 + localY * newScale * cos2);
+            // Переводим в локальные координаты изображения
+            const localX = ( dx * cos0 + dy * sin0) / startScale;
+            const localY = (-dx * sin0 + dy * cos0) / startScale;
+
+            // 2. Применяем новый поворот и масштаб, оставляя эту локальную точку под тем же focal
+            const rad1 = newRotation * Math.PI / 180;
+            const cos1 = Math.cos(rad1);
+            const sin1 = Math.sin(rad1);
+
+            tx = focalX - (localX * newScale * cos1 - localY * newScale * sin1);
+            ty = focalY - (localX * newScale * sin1 + localY * newScale * cos1);
 
             scale = newScale;
             rotation = newRotation;
@@ -212,47 +214,44 @@
         }
     }, { passive: false });
 
-    viewport.addEventListener('touchend', (e) => {
-        for (const t of e.changedTouches) {
-            pointers.delete(t.identifier);
+    viewport.addEventListener('touchend', function (e) {
+        if (e.touches.length < 2) {
+            active = false;
         }
-        viewport._lastPan = null;
-
-        // Обновляем last-значения, если осталось 2 пальца
-        if (pointers.size === 2) {
-            const pts = [...pointers.values()];
-            lastDist = getDistance(pts[0], pts[1]);
-            lastAngle = getAngle(pts[0], pts[1]);
-            lastMid = getMidpoint(pts[0], pts[1]);
-            lastScale = scale;
-            lastRotation = rotation;
-            lastX = x;
-            lastY = y;
+        if (e.touches.length === 0) {
+            panning = false;
+        }
+        if (e.touches.length === 1) {
+            // Перешли с двух пальцев на один
+            panning = true;
+            const p = getPoint(e.touches[0]);
+            lastPanX = p.x;
+            lastPanY = p.y;
         }
     });
 
-    viewport.addEventListener('touchcancel', (e) => {
-        pointers.clear();
-        viewport._lastPan = null;
+    viewport.addEventListener('touchcancel', function () {
+        active = false;
+        panning = false;
     });
 
     // Автообновление
     setInterval(refresh, 4 * 60 * 1000);
 
-    // Центрируем при загрузке
-    img.onload = () => {
-        setTimeout(() => {
+    // Центрирование при загрузке
+    img.onload = function () {
+        setTimeout(function () {
             const rect = viewport.getBoundingClientRect();
             const w = img.naturalWidth;
             const h = img.naturalHeight;
             if (!w || !h) return;
 
-            scale = Math.min(rect.width / w, rect.height / h) * 0.96;
-            x = (rect.width - w * scale) / 2;
-            y = (rect.height - h * scale) / 2;
+            scale = Math.min(rect.width / w, rect.height / h) * 0.95;
+            tx = (rect.width - w * scale) / 2;
+            ty = (rect.height - h * scale) / 2;
             rotation = 0;
             apply();
-        }, 80);
+        }, 60);
     };
 
     apply();
