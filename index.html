@@ -173,14 +173,80 @@
         </div>
     </div>
 
-    <div class="viewport" id="viewport">
-        <img id="radar" src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif" alt="Радар">
+<div class="viewport" id="viewport">
+
+    <!-- Кнопка слоёв -->
+    <button id="radarLayersButton" class="radar-layers-button">
+        ☰
+    </button>
+
+    <!-- Правая панель -->
+    <div id="radarLayersPanel" class="radar-layers-panel">
+
+        <div class="radar-panel-header">
+            <span>Слои</span>
+
+            <button id="closeRadarPanel" class="radar-panel-close">
+                ×
+            </button>
+        </div>
+
+        <div class="radar-layer-section">
+
+            <div class="radar-layer-title">
+                РАДАР
+            </div>
+
+            <label class="radar-layer-row">
+                <span>
+                    <input type="checkbox" id="operaRadarToggle">
+                    <span>LibreWXR / OPERA</span>
+                </span>
+            </label>
+
+        </div>
+
+        <div class="radar-layer-section">
+
+            <div class="radar-layer-title">
+                СТАНЦИИ
+            </div>
+
+            <label class="radar-layer-row">
+                <span>
+                    <input type="checkbox" id="radarCoverageToggle">
+                    <span>Зоны покрытия</span>
+                </span>
+            </label>
+
+            <label class="radar-layer-row">
+                <span>
+                    <input type="checkbox" id="radarStationsToggle">
+                    <span>Радарные станции</span>
+                </span>
+            </label>
+
+        </div>
+
+        <div id="radarStationsStatus" class="radar-stations-status">
+            Станции: загрузка...
+        </div>
+
     </div>
+
+    <!-- ТВОЙ СУЩЕСТВУЮЩИЙ РАДАР -->
+    <img
+        id="radar"
+        src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif"
+        alt="Радар">
+
+</div>
 
     <div class="bottom-bar">
         Обновлено:<strong id="updateTime">—</strong>
     </div>
-
+<script src="radar-stations.js"></script>
+    
 <script>
     const img = document.getElementById('radar');
     const viewport = document.getElementById('viewport');
