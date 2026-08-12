@@ -137,6 +137,155 @@
             flex-shrink: 0;
             border: 1px solid rgba(255,255,255,0.12);
         }
+        /* ===== ПАНЕЛЬ СЛОЁВ РАДАРА ===== */
+
+.radar-layers-button {
+    position: absolute;
+    right: 12px;
+    top: 60px;
+
+    width: 44px;
+    height: 44px;
+
+    padding: 0;
+
+    background: rgba(15, 23, 42, 0.94);
+    border: 1px solid #334155;
+    border-radius: 12px;
+
+    color: #e2e8f0;
+    font-size: 20px;
+
+    z-index: 60;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    backdrop-filter: blur(10px);
+}
+
+.radar-layers-panel {
+    position: absolute;
+
+    top: 0;
+    right: 0;
+
+    width: 300px;
+    max-width: 85vw;
+    height: 100%;
+
+    background: rgba(15, 23, 42, 0.97);
+
+    border-left: 1px solid #334155;
+
+    z-index: 59;
+
+    transform: translateX(100%);
+
+    transition: transform 0.28s ease;
+
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.35);
+
+    backdrop-filter: blur(14px);
+
+    overflow-y: auto;
+
+    pointer-events: none;
+}
+
+.radar-layers-panel.open {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.radar-panel-header {
+    height: 58px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 14px;
+
+    border-bottom: 1px solid #334155;
+
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.radar-panel-close {
+    width: 36px;
+    height: 36px;
+
+    padding: 0;
+
+    border-radius: 9px;
+
+    font-size: 24px;
+    line-height: 1;
+
+    color: #cbd5e1;
+
+    background: #1e293b;
+
+    border: 1px solid #334155;
+}
+
+.radar-layer-section {
+    padding: 15px 14px;
+
+    border-bottom: 1px solid #1e293b;
+}
+
+.radar-layer-title {
+    font-size: 10px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.8px;
+
+    color: #64748b;
+
+    margin-bottom: 10px;
+}
+
+.radar-layer-row {
+    display: flex;
+
+    align-items: center;
+
+    min-height: 42px;
+
+    color: #cbd5e1;
+
+    font-size: 13px;
+}
+
+.radar-layer-row span {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.radar-layer-row input {
+    width: 18px;
+    height: 18px;
+
+    accent-color: #0ea5e9;
+}
+
+.radar-stations-status {
+    padding: 14px;
+
+    color: #64748b;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
     </style>
 </head>
 <body>
@@ -174,6 +323,62 @@
     </div>
 
 <div class="viewport" id="viewport">
+<button id="radarLayersButton" class="radar-layers-button">
+    ☰
+</button>
+
+<div id="radarLayersPanel" class="radar-layers-panel">
+
+    <div class="radar-panel-header">
+        <span>Слои</span>
+
+        <button id="closeRadarPanel" class="radar-panel-close">
+            ×
+        </button>
+    </div>
+
+    <div class="radar-layer-section">
+
+        <div class="radar-layer-title">
+            РАДАР
+        </div>
+
+        <label class="radar-layer-row">
+            <span>
+                <input type="checkbox" id="operaRadarToggle">
+                <span>LibreWXR / OPERA</span>
+            </span>
+        </label>
+
+    </div>
+
+    <div class="radar-layer-section">
+
+        <div class="radar-layer-title">
+            СТАНЦИИ
+        </div>
+
+        <label class="radar-layer-row">
+            <span>
+                <input type="checkbox" id="radarCoverageToggle">
+                <span>Зоны покрытия</span>
+            </span>
+        </label>
+
+        <label class="radar-layer-row">
+            <span>
+                <input type="checkbox" id="radarStationsToggle">
+                <span>Радарные станции</span>
+            </span>
+        </label>
+
+    </div>
+
+    <div id="radarStationsStatus" class="radar-stations-status">
+        Станции: загрузка...
+    </div>
+
+</div>    
 
     <!-- Кнопка слоёв -->
     <button id="radarLayersButton" class="radar-layers-button">
