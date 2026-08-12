@@ -290,6 +290,19 @@
 
     line-height: 1.5;
 }
+.radar-layers-button {
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+}
+
+.radar-layers-panel {
+    touch-action: auto !important;
+}
+
+.radar-panel-close {
+    touch-action: manipulation !important;
+    pointer-events: auto !important;
+}        
     </style>
 </head>
 <body>
@@ -327,7 +340,10 @@
     </div>
 
 <div class="viewport" id="viewport">
-<button id="radarLayersButton" class="radar-layers-button">
+<button
+    id="radarLayersButton"
+    class="radar-layers-button"
+    onclick="toggleRadarPanel(event)">
     ☰
 </button>
 
@@ -526,32 +542,37 @@
        ПАНЕЛЬ СЛОЁВ
        ========================================= */
 
-    const radarLayersButton =
-        document.getElementById('radarLayersButton');
+const radarLayersPanel =
+    document.getElementById('radarLayersPanel');
 
-    const radarLayersPanel =
-        document.getElementById('radarLayersPanel');
-
-    const closeRadarPanel =
-        document.getElementById('closeRadarPanel');
+const closeRadarPanel =
+    document.getElementById('closeRadarPanel');
 
 
-    radarLayersButton.addEventListener('click', function(e) {
-
+function toggleRadarPanel(e) {
+    if (e) {
+        e.preventDefault();
         e.stopPropagation();
+    }
 
-        radarLayersPanel.classList.toggle('open');
+    radarLayersPanel.classList.toggle('open');
+}
 
-    });
+
+closeRadarPanel.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    radarLayersPanel.classList.remove('open');
+}, { passive: false });
 
 
-    closeRadarPanel.addEventListener('click', function(e) {
+closeRadarPanel.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
 
-        e.stopPropagation();
-
-        radarLayersPanel.classList.remove('open');
-
-    });
+    radarLayersPanel.classList.remove('open');
+});
 </script>
 </body>
 </html>
