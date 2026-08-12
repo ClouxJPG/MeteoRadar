@@ -1,320 +1,462 @@
 /* =========================================================
    radar-stations.js
-   OPERA / LibreWXR radar stations
+   OPERA radar stations
    Россия и Украина исключены
    ========================================================= */
 
-const RADAR_COVERAGE_RADIUS_KM = 300;
+const OPERA_DATABASE_URL =
+    "https://www.eumetnet.eu/wp-content/themes/aeron-child/observations-programme/current-activities/opera/database/OPERA_Database/OPERA_RADARS_DB.json";
 
-/*
- * Список стран, которые не должны отображаться.
- * Россия и Украина исключены специально.
- */
+const DEFAULT_RADAR_RADIUS_KM = 300;
+
 const EXCLUDED_COUNTRIES = new Set([
-    "Russia",
-    "Russian Federation",
     "RU",
-    "Ukraine",
-    "UA"
+    "RUS",
+    "RUSSIA",
+    "RUSSIAN FEDERATION",
+
+    "UA",
+    "UKR",
+    "UKRAINE"
 ]);
 
-/*
- * Базовый список OPERA-радаров.
- *
- * Структура:
- * {
- *   id:       уникальный ID станции
- *   name:     название
- *   country:  страна
- *   code:     OPERA/ODIM код
- *   lat:      широта
- *   lon:      долгота
- *   radius:   радиус покрытия в км
- *   active:   активна ли станция
- * }
- *
- * Координаты сюда будут загружаться из актуальной
- * базы OPERA, а не задаваться приблизительно.
- */
-
-const OPERA_RADARS = [];
+let operaRadars = [];
 
 
 /* =========================================================
-   ПРОВЕРКА СТАНЦИИ
+   НОРМАЛИЗАЦИЯ СТРАНЫ
    ========================================================= */
 
-function isRadarAllowed(radar) {
+function normalizeCountry(value) {
 
-    if (!radar) return false;
-
-    if (
-        radar.country &&
-        EXCLUDED_COUNTRIES.has(String(radar.country).trim())
-    ) {
-        return false;
+    if (value === undefined || value === null) {
+        return "";
     }
 
-    if (
-        typeof radar.lat !== "number" ||
-        typeof radar.lon !== "number"
-    ) {
-        return false;
-    }
+    return String(value)
+        .trim()
+        .toUpperCase();
 
-    if (
-        radar.lat < -90 ||
-        radar.lat > 90 ||
-        radar.lon < -180 ||
-        radar.lon > 180
-    ) {
-        return false;
-    }
-
-    return true;
 }
 
 
 /* =========================================================
-   ПОЛУЧЕНИЕ РАЗРЕШЁННЫХ РАДАРОВ
+   ПРОВЕРКА РОССИИ / УКРАИНЫ
+   ========================================================= */
+
+function isExcludedCountry(country) {
+
+    const c = normalizeCountry(country);
+
+    return (
+        EXCLUDED_COUNTRIES.has(c) ||
+        c.includes("RUSSIA") ||
+        c.includes("RUSSIAN") ||
+        c.includes("UKRAINE")
+    );
+
+}
+
+
+/* =========================================================
+   ПОИСК ЗНАЧЕНИЯ В ОБЪЕКТЕ
+   ========================================================= */
+
+function findValue(object, names) {
+
+    for (const name of names) {
+
+        if (
+            object[name] !== undefined &&
+            object[name] !== null &&
+            object[name] !== ""
+        ) {
+            return object[name];
+        }
+
+    }
+
+    return null;
+
+}
+
+
+/* =========================================================
+   ПРЕОБРАЗОВАНИЕ КООРДИНАТ
+   ========================================================= */
+
+function numberValue(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === ""
+    ) {
+        return null;
+    }
+
+    const n = Number(
+        String(value)
+            .replace(",", ".")
+            .trim()
+    );
+
+    return Number.isFinite(n) ? n : null;
+
+}
+
+
+/* =========================================================
+   ПРЕОБРАЗОВАНИЕ РАДАРА
+   ========================================================= */
+
+function normalizeRadar(raw, index) {
+
+    const lat = numberValue(
+        findValue(raw, [
+            "lat",
+            "latitude",
+            "LAT",
+            "Latitude",
+            "LATITUDE"
+        ])
+    );
+
+    const lon = numberValue(
+        findValue(raw, [
+            "lon",
+            "longitude",
+            "lng",
+            "LON",
+            "Longitude",
+            "LONGITUDE"
+        ])
+    );
+
+    if (lat === null || lon === null) {
+        return null;
+    }
+
+    if (lat < -90 || lat > 90) {
+        return null;
+    }
+
+    if (lon < -180 || lon > 180) {
+        return null;
+    }
+
+    const country = findValue(raw, [
+        "country",
+        "Country",
+        "COUNTRY",
+        "country_code",
+        "countryCode",
+        "CountryCode"
+    ]);
+
+    if (isExcludedCountry(country)) {
+        return null;
+    }
+
+    const name = findValue(raw, [
+        "name",
+        "Name",
+        "NAME",
+        "location",
+        "Location",
+        "site",
+        "Site",
+        "station",
+        "Station"
+    ]) || `OPERA Radar ${index + 1}`;
+
+    const code = findValue(raw, [
+        "code",
+        "Code",
+        "CODE",
+        "radar",
+        "Radar",
+        "RADAR",
+        "id",
+        "ID"
+    ]) || `opera-${index + 1}`;
+
+    const status = findValue(raw, [
+        "status",
+        "Status",
+        "STATUS"
+    ]);
+
+    const radius = numberValue(
+        findValue(raw, [
+            "radius",
+            "Radius",
+            "RADIUS",
+            "range",
+            "Range",
+            "range_km",
+            "rangeKm"
+        ])
+    );
+
+    return {
+
+        id: String(code),
+
+        name: String(name),
+
+        country:
+            country !== null
+                ? String(country)
+                : "",
+
+        code: String(code),
+
+        lat: lat,
+
+        lon: lon,
+
+        radius:
+            radius && radius > 0
+                ? radius
+                : DEFAULT_RADAR_RADIUS_KM,
+
+        active:
+            status === null
+                ? true
+                : ![
+                    "inactive",
+                    "offline",
+                    "closed",
+                    "disabled"
+                ].includes(
+                    String(status).toLowerCase()
+                ),
+
+        raw: raw
+
+    };
+
+}
+
+
+/* =========================================================
+   ЗАГРУЗКА OPERA DATABASE
+   ========================================================= */
+
+async function loadOperaRadars() {
+
+    try {
+
+        const response =
+            await fetch(
+                OPERA_DATABASE_URL,
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `OPERA HTTP ${response.status}`
+            );
+
+        }
+
+        const json =
+            await response.json();
+
+        let source = json;
+
+        /*
+         * На случай, если OPERA вернёт:
+         * { radars: [...] }
+         * { data: [...] }
+         * { stations: [...] }
+         */
+
+        if (
+            json &&
+            !Array.isArray(json)
+        ) {
+
+            source =
+                json.radars ||
+                json.stations ||
+                json.data ||
+                json.results ||
+                [];
+
+        }
+
+        if (!Array.isArray(source)) {
+
+            throw new Error(
+                "Не удалось найти массив радаров OPERA"
+            );
+
+        }
+
+        operaRadars =
+            source
+                .map(
+                    (radar, index) =>
+                        normalizeRadar(
+                            radar,
+                            index
+                        )
+                )
+                .filter(Boolean);
+
+        console.log(
+            `OPERA: загружено ${operaRadars.length} радаров`
+        );
+
+        return operaRadars;
+
+    } catch (error) {
+
+        console.error(
+            "Ошибка загрузки OPERA:",
+            error
+        );
+
+        operaRadars = [];
+
+        return [];
+
+    }
+
+}
+
+
+/* =========================================================
+   ПОЛУЧИТЬ ВСЕ РАДАРЫ
    ========================================================= */
 
 function getOperaRadars() {
 
-    return OPERA_RADARS.filter(isRadarAllowed);
+    return operaRadars.slice();
 
 }
 
 
 /* =========================================================
-   РАДИУС В МЕТРАХ
+   ПОЛУЧИТЬ РАДАРЫ СТРОГО БЕЗ RU / UA
    ========================================================= */
 
-function getRadarRadiusMeters(radar) {
+function getAllowedOperaRadars() {
 
-    const radius =
-        Number(radar.radius) > 0
-            ? Number(radar.radius)
-            : RADAR_COVERAGE_RADIUS_KM;
-
-    return radius * 1000;
+    return operaRadars.filter(
+        radar =>
+            !isExcludedCountry(
+                radar.country
+            )
+    );
 
 }
 
 
 /* =========================================================
-   СОЗДАНИЕ ДАННЫХ ДЛЯ LEAFLET
+   ПОЛУЧИТЬ ДАННЫЕ ДЛЯ ТОЧЕК
    ========================================================= */
 
-function createRadarStationData(radar) {
+function getRadarMarkers() {
 
-    return {
+    return getAllowedOperaRadars()
+        .map(radar => ({
 
-        id: radar.id || radar.code,
+            id: radar.id,
 
-        name:
-            radar.name ||
-            "Радар OPERA",
+            lat: radar.lat,
 
-        country:
-            radar.country ||
-            "",
+            lon: radar.lon,
 
-        code:
-            radar.code ||
-            "",
+            name: radar.name,
 
-        lat:
-            Number(radar.lat),
+            country: radar.country,
 
-        lon:
-            Number(radar.lon),
+            code: radar.code,
 
-        radius:
-            getRadarRadiusMeters(radar),
+            active: radar.active
 
-        active:
-            radar.active !== false
-
-    };
+        }));
 
 }
 
 
 /* =========================================================
-   ПОЛУЧЕНИЕ ДАННЫХ ДЛЯ КАРТЫ
+   ПОЛУЧИТЬ ДАННЫЕ ДЛЯ КРУГОВ
    ========================================================= */
 
-function getRadarStationData() {
+function getRadarCoverage() {
 
-    return getOperaRadars()
-        .map(createRadarStationData);
+    return getAllowedOperaRadars()
+        .map(radar => ({
+
+            id: radar.id,
+
+            lat: radar.lat,
+
+            lon: radar.lon,
+
+            name: radar.name,
+
+            country: radar.country,
+
+            code: radar.code,
+
+            radius:
+                radar.radius * 1000,
+
+            active: radar.active
+
+        }));
 
 }
 
 
 /* =========================================================
-   СОЗДАНИЕ ТОЧКИ РАДАРА
+   НАЙТИ БЛИЖАЙШИЙ РАДАР
    ========================================================= */
 
-function createRadarMarkerData(radar) {
-
-    return {
-
-        lat: radar.lat,
-
-        lon: radar.lon,
-
-        title:
-            radar.name || "Радар OPERA",
-
-        code:
-            radar.code || "",
-
-        country:
-            radar.country || "",
-
-        active:
-            radar.active !== false
-
-    };
-
-}
-
-
-/* =========================================================
-   СОЗДАНИЕ ЗОНЫ ПОКРЫТИЯ
-   ========================================================= */
-
-function createRadarCoverageData(radar) {
-
-    return {
-
-        lat: radar.lat,
-
-        lon: radar.lon,
-
-        radius:
-            radar.radius,
-
-        name:
-            radar.name || "Радар OPERA",
-
-        code:
-            radar.code || "",
-
-        country:
-            radar.country || "",
-
-        active:
-            radar.active !== false
-
-    };
-
-}
-
-
-/* =========================================================
-   ПОЛУЧЕНИЕ ВСЕХ ЗОН ПОКРЫТИЯ
-   ========================================================= */
-
-function getRadarCoverageData() {
-
-    return getRadarStationData()
-        .map(createRadarCoverageData);
-
-}
-
-
-/* =========================================================
-   ИНФОРМАЦИЯ О РАДАРЕ
-   ========================================================= */
-
-function getRadarInfo(radar) {
-
-    return {
-
-        name:
-            radar.name || "Неизвестный радар",
-
-        country:
-            radar.country || "—",
-
-        code:
-            radar.code || "—",
-
-        coordinates:
-            `${radar.lat.toFixed(4)}, ${radar.lon.toFixed(4)}`,
-
-        radius:
-            `${Math.round(radar.radius / 1000)} км`,
-
-        status:
-            radar.active
-                ? "Активен"
-                : "Неактивен"
-
-    };
-
-}
-
-
-/* =========================================================
-   ФИЛЬТРАЦИЯ ПО СТРАНЕ
-   ========================================================= */
-
-function getRadarsByCountry(country) {
-
-    return getRadarStationData()
-        .filter(radar =>
-            radar.country === country
-        );
-
-}
-
-
-/* =========================================================
-   ПОИСК РАДАРА
-   ========================================================= */
-
-function findRadarById(id) {
-
-    return getRadarStationData()
-        .find(radar =>
-            radar.id === id
-        );
-
-}
-
-
-/* =========================================================
-   ПОИСК БЛИЖАЙШЕГО РАДАРА
-   ========================================================= */
-
-function findNearestRadar(lat, lon) {
+function findNearestRadar(
+    latitude,
+    longitude
+) {
 
     let nearest = null;
-    let nearestDistance = Infinity;
 
-    getRadarStationData()
-        .forEach(radar => {
+    let nearestDistance =
+        Infinity;
 
-            const distance =
-                getDistanceKm(
-                    lat,
-                    lon,
-                    radar.lat,
-                    radar.lon
-                );
+    for (
+        const radar
+        of getAllowedOperaRadars()
+    ) {
 
-            if (distance < nearestDistance) {
+        const distance =
+            getDistanceKm(
+                latitude,
+                longitude,
+                radar.lat,
+                radar.lon
+            );
 
-                nearestDistance = distance;
-                nearest = radar;
+        if (
+            distance <
+            nearestDistance
+        ) {
 
-            }
+            nearestDistance =
+                distance;
 
-        });
+            nearest = radar;
+
+        }
+
+    }
 
     return {
 
@@ -331,25 +473,47 @@ function findNearestRadar(lat, lon) {
 
 
 /* =========================================================
-   РАССТОЯНИЕ МЕЖДУ ДВУМЯ КООРДИНАТАМИ
+   РАССТОЯНИЕ
    ========================================================= */
 
-function getDistanceKm(lat1, lon1, lat2, lon2) {
+function getDistanceKm(
+    lat1,
+    lon1,
+    lat2,
+    lon2
+) {
 
     const R = 6371;
 
     const dLat =
-        (lat2 - lat1) *
-        Math.PI / 180;
+        (
+            lat2 - lat1
+        ) *
+        Math.PI /
+        180;
 
     const dLon =
-        (lon2 - lon1) *
-        Math.PI / 180;
+        (
+            lon2 - lon1
+        ) *
+        Math.PI /
+        180;
 
     const a =
         Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
+
+        Math.cos(
+            lat1 *
+            Math.PI /
+            180
+        ) *
+
+        Math.cos(
+            lat2 *
+            Math.PI /
+            180
+        ) *
+
         Math.sin(dLon / 2) ** 2;
 
     const c =
@@ -365,33 +529,27 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
 
 
 /* =========================================================
-   ЭКСПОРТ В ГЛОБАЛЬНУЮ ОБЛАСТЬ
+   ЭКСПОРТ
    ========================================================= */
 
 window.RadarStations = {
 
+    load:
+        loadOperaRadars,
+
     getAll:
-        getRadarStationData,
+        getAllowedOperaRadars,
+
+    getMarkers:
+        getRadarMarkers,
 
     getCoverage:
-        getRadarCoverageData,
-
-    getInfo:
-        getRadarInfo,
-
-    getByCountry:
-        getRadarsByCountry,
-
-    findById:
-        findRadarById,
+        getRadarCoverage,
 
     findNearest:
         findNearestRadar,
 
     distanceKm:
-        getDistanceKm,
-
-    coverageRadiusKm:
-        RADAR_COVERAGE_RADIUS_KM
+        getDistanceKm
 
 };
