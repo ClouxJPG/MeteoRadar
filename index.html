@@ -140,6 +140,9 @@
         /* ===== ПАНЕЛЬ СЛОЁВ РАДАРА ===== */
 
 .radar-layers-button {
+    pointer-events: auto;
+    touch-action: manipulation;
+    
     position: absolute;
     right: 12px;
     top: 60px;
@@ -166,6 +169,7 @@
 }
 
 .radar-layers-panel {
+    touch-action: auto;
     position: absolute;
 
     top: 0;
@@ -380,64 +384,6 @@
 
 </div>    
 
-    <!-- Кнопка слоёв -->
-    <button id="radarLayersButton" class="radar-layers-button">
-        ☰
-    </button>
-
-    <!-- Правая панель -->
-    <div id="radarLayersPanel" class="radar-layers-panel">
-
-        <div class="radar-panel-header">
-            <span>Слои</span>
-
-            <button id="closeRadarPanel" class="radar-panel-close">
-                ×
-            </button>
-        </div>
-
-        <div class="radar-layer-section">
-
-            <div class="radar-layer-title">
-                РАДАР
-            </div>
-
-            <label class="radar-layer-row">
-                <span>
-                    <input type="checkbox" id="operaRadarToggle">
-                    <span>LibreWXR / OPERA</span>
-                </span>
-            </label>
-
-        </div>
-
-        <div class="radar-layer-section">
-
-            <div class="radar-layer-title">
-                СТАНЦИИ
-            </div>
-
-            <label class="radar-layer-row">
-                <span>
-                    <input type="checkbox" id="radarCoverageToggle">
-                    <span>Зоны покрытия</span>
-                </span>
-            </label>
-
-            <label class="radar-layer-row">
-                <span>
-                    <input type="checkbox" id="radarStationsToggle">
-                    <span>Радарные станции</span>
-                </span>
-            </label>
-
-        </div>
-
-        <div id="radarStationsStatus" class="radar-stations-status">
-            Станции: загрузка...
-        </div>
-
-    </div>
 
     <!-- ТВОЙ СУЩЕСТВУЮЩИЙ РАДАР -->
     <img
