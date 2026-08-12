@@ -1,221 +1,303 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Радар — Европейская Россия</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
-        html, body {
-            height: 100%;
-            background: #0b1220;
-            color: #e2e8f0;
-            font-family: -apple-system, system-ui, sans-serif;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+<meta charset="utf-8">
 
-        .header {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: 48px;
-            background: rgba(11, 18, 32, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 12px;
-            z-index: 50;
-            border-bottom: 1px solid #1e293b;
-        }
-        .title { font-size: 15px; font-weight: 600; }
-        .title span { color: #38bdf8; }
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
 
-        .header-btns { display: flex; gap: 8px; }
-        button {
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: #e2e8f0;
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-        button:active { background: #334155; }
-        button.active { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
+<title>Радар / модель</title>
 
-        .viewport {
-            position: absolute;
-            top: 48px;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-            background: #0b1220;
-        }
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
-        #radar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: 0 0;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            will-change: transform;
-            pointer-events: none;
-        }
+<style>
 
-        /* Нижний блок */
-        .bottom-bar {
-            position: fixed;
-            left: 12px;
-            right: 12px;
-            bottom: 14px;
-            height: 40px;
-            background: rgba(15, 23, 42, 0.92);
-            border: 1px solid #334155;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 13px;
-            color: #94a3b8;
-            z-index: 45;
-            backdrop-filter: blur(8px);
-        }
-        .bottom-bar strong {
-            color: #e2e8f0;
-            font-weight: 500;
-            margin-left: 4px;
-        }
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
-        /* Легенда */
-        .legend {
-            position: fixed;
-            top: 48px;
-            left: 12px;
-            right: 12px;
-            max-height: 0;
-            overflow: hidden;
-            background: rgba(15, 23, 42, 0.96);
-            border: 1px solid #334155;
-            border-radius: 12px;
-            z-index: 48;
-            transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.2s ease;
-            opacity: 0;
-            backdrop-filter: blur(10px);
-        }
-        .legend.open {
-            max-height: 340px;
-            padding: 12px 14px 14px;
-            opacity: 1;
-            margin-top: 8px;
-        }
+html,
+body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
 
-        .legend-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #38bdf8;
-            margin-bottom: 10px;
-        }
+    background: #05070b;
+    color: #e2e8f0;
 
-        .legend-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px 10px;
-            font-size: 11.5px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            color: #cbd5e1;
-        }
-        .swatch {
-            width: 13px;
-            height: 13px;
-            border-radius: 3px;
-            flex-shrink: 0;
-            border: 1px solid rgba(255,255,255,0.12);
-        }
-        /* ===== ПАНЕЛЬ СЛОЁВ РАДАРА ===== */
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* =========================================
+   ШАПКА
+   ========================================= */
+
+.header {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 48px;
+
+    background: rgba(7, 11, 18, 0.96);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 12px;
+
+    z-index: 1000;
+
+    border-bottom: 1px solid #1e293b;
+}
+
+.title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.title span {
+    color: #38bdf8;
+}
+
+.header-btns {
+    display: flex;
+    gap: 8px;
+}
+
+button {
+    background: #1e293b;
+
+    border: 1px solid #334155;
+
+    color: #e2e8f0;
+
+    padding: 7px 12px;
+
+    border-radius: 8px;
+
+    font-size: 13px;
+
+    -webkit-tap-highlight-color: transparent;
+}
+
+button:active {
+    background: #334155;
+}
+
+button.active {
+    background: #0ea5e9;
+    border-color: #0ea5e9;
+    color: white;
+}
+
+/* =========================================
+   ОСНОВНАЯ ОБЛАСТЬ
+   ========================================= */
+
+.viewport {
+
+    position: fixed;
+
+    top: 48px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    overflow: hidden;
+
+    background: #05070b;
+
+    touch-action: none;
+}
+
+/* =========================================
+   СТАРАЯ GIF
+   ========================================= */
+
+#radar {
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+
+    transform-origin: 0 0;
+
+    max-width: none;
+    max-height: none;
+
+    image-rendering: auto;
+
+    pointer-events: none;
+
+    z-index: 5;
+}
+
+/* =========================================
+   LIBREWXR КАРТА
+   ========================================= */
+
+#libreMap {
+
+    position: absolute;
+
+    inset: 0;
+
+    z-index: 10;
+
+    background: #05070b;
+
+    display: none;
+
+    touch-action: pan-x pan-y pinch-zoom;
+}
+
+#libreMap.open {
+    display: block;
+}
+
+/* Затемняем базовую карту */
+
+#libreMap .leaflet-tile {
+
+    filter:
+        brightness(0.42)
+        contrast(1.25)
+        saturate(0.55);
+}
+
+/* Убираем стандартный zoom */
+
+.leaflet-control-zoom {
+    display: none !important;
+}
+
+/* =========================================
+   КНОПКА СЛОЁВ
+   ========================================= */
 
 .radar-layers-button {
+
     position: absolute;
+
     right: 12px;
-    top: 60px;
+    top: 12px;
+
     width: 44px;
     height: 44px;
 
     padding: 0;
 
-    background: rgba(15, 23, 42, 0.94);
+    background: rgba(15, 23, 42, 0.96);
+
     border: 1px solid #334155;
+
     border-radius: 12px;
 
     color: #e2e8f0;
-    font-size: 20px;
 
-    z-index: 100;
+    font-size: 21px;
+
+    z-index: 2000;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    pointer-events: auto !important;
-    touch-action: manipulation !important;
+    pointer-events: auto;
+
+    touch-action: manipulation;
+
+    box-shadow:
+        0 5px 20px rgba(0,0,0,.35);
 }
 
+/* =========================================
+   ПАНЕЛЬ
+   ========================================= */
+
 .radar-layers-panel {
-    touch-action: auto;
+
     position: absolute;
 
     top: 0;
     right: 0;
 
     width: 300px;
-    max-width: 85vw;
+    max-width: 86vw;
+
     height: 100%;
 
-    background: rgba(15, 23, 42, 0.97);
+    background: rgba(10, 15, 25, 0.98);
 
     border-left: 1px solid #334155;
 
-    z-index: 59;
+    z-index: 3000;
 
     transform: translateX(100%);
 
-    transition: transform 0.28s ease;
+    transition:
+        transform .28s ease;
 
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.35);
-
-    backdrop-filter: blur(14px);
+    box-shadow:
+        -10px 0 35px rgba(0,0,0,.45);
 
     overflow-y: auto;
 
     pointer-events: none;
+
+    touch-action: auto;
 }
 
 .radar-layers-panel.open {
+
     transform: translateX(0);
+
     pointer-events: auto;
 }
 
+/* =========================================
+   ЗАГОЛОВОК ПАНЕЛИ
+   ========================================= */
+
 .radar-panel-header {
+
     height: 58px;
 
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
     padding: 0 14px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
 
     border-bottom: 1px solid #334155;
 
     font-size: 15px;
+
     font-weight: 600;
 }
 
 .radar-panel-close {
+
     width: 36px;
     height: 36px;
 
@@ -224,27 +306,36 @@
     border-radius: 9px;
 
     font-size: 24px;
-    line-height: 1;
 
-    color: #cbd5e1;
+    line-height: 1;
 
     background: #1e293b;
 
+    color: #cbd5e1;
+
     border: 1px solid #334155;
+
+    touch-action: manipulation;
 }
 
+/* =========================================
+   СЕКЦИИ
+   ========================================= */
+
 .radar-layer-section {
+
     padding: 15px 14px;
 
     border-bottom: 1px solid #1e293b;
 }
 
 .radar-layer-title {
+
     font-size: 10px;
 
     font-weight: 700;
 
-    letter-spacing: 0.8px;
+    letter-spacing: .8px;
 
     color: #64748b;
 
@@ -252,18 +343,22 @@
 }
 
 .radar-layer-row {
+
     display: flex;
 
     align-items: center;
 
-    min-height: 42px;
+    min-height: 45px;
 
     color: #cbd5e1;
 
     font-size: 13px;
+
+    cursor: pointer;
 }
 
 .radar-layer-row span {
+
     display: flex;
 
     align-items: center;
@@ -272,13 +367,19 @@
 }
 
 .radar-layer-row input {
-    width: 18px;
-    height: 18px;
+
+    width: 19px;
+    height: 19px;
 
     accent-color: #0ea5e9;
 }
 
+/* =========================================
+   СТАТУС
+   ========================================= */
+
 .radar-stations-status {
+
     padding: 14px;
 
     color: #64748b;
@@ -287,293 +388,486 @@
 
     line-height: 1.5;
 }
-.radar-stations-status {
-    padding: 14px;
 
-    color: #64748b;
+/* =========================================
+   НИЖНИЙ БЛОК
+   ========================================= */
 
-    font-size: 11px;
+.bottom-bar {
 
-    line-height: 1.5;
+    position: fixed;
+
+    left: 12px;
+    right: 12px;
+
+    bottom: 14px;
+
+    height: 40px;
+
+    background:
+        rgba(15, 23, 42, .92);
+
+    border: 1px solid #334155;
+
+    border-radius: 12px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 13px;
+
+    color: #94a3b8;
+
+    z-index: 1500;
+
+    backdrop-filter: blur(8px);
 }
 
-/* КАРТА LIBREWXR */
-#libreMap {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    background: #05070b;
-    display: none;
+.bottom-bar strong {
+
+    color: #e2e8f0;
+
+    font-weight: 500;
+
+    margin-left: 4px;
 }
 
-#libreMap.open {
-    display: block;
+/* =========================================
+   ЛЕГЕНДА
+   ========================================= */
+
+.legend {
+
+    position: fixed;
+
+    top: 56px;
+
+    left: 12px;
+    right: 12px;
+
+    max-height: 0;
+
+    overflow: hidden;
+
+    background:
+        rgba(15, 23, 42, .97);
+
+    border: 1px solid #334155;
+
+    border-radius: 12px;
+
+    z-index: 2500;
+
+    opacity: 0;
+
+    transition:
+        max-height .28s ease,
+        opacity .2s ease,
+        padding .28s ease;
+
+    backdrop-filter: blur(10px);
 }
 
-#libreMap .leaflet-tile {
-    filter: brightness(0.55) contrast(1.15) saturate(0.7);
+.legend.open {
+
+    max-height: 350px;
+
+    padding: 12px 14px 14px;
+
+    opacity: 1;
 }
 
-.leaflet-control-zoom {
-    display: none;
+.legend-title {
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    color: #38bdf8;
+
+    margin-bottom: 10px;
 }
-      
-    </style>
+
+.legend-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 5px 10px;
+
+    font-size: 11.5px;
+}
+
+.legend-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    color: #cbd5e1;
+}
+
+.swatch {
+
+    width: 13px;
+    height: 13px;
+
+    border-radius: 3px;
+
+    flex-shrink: 0;
+
+    border:
+        1px solid
+        rgba(255,255,255,.12);
+}
+
+</style>
 </head>
+
 <body>
-    <div class="header">
-        <div class="title">Радар <span>Европ. Россия</span></div>
-        <div class="header-btns">
-            <button id="btnLegend" onclick="toggleLegend()">Легенда</button>
-            <button onclick="refresh()">Обновить</button>
-        </div>
+
+<!-- =========================================
+     ШАПКА
+     ========================================= -->
+
+<div class="header">
+
+    <div class="title">
+        Радар <span>/ модель</span>
     </div>
 
-    <!-- Легенда по официальной раскраске METEORAD -->
-    <div class="legend" id="legend">
-        <div class="legend-title">Метеорадар (ЦАО / Гидрометцентр)</div>
-        <div class="legend-grid">
-            <div class="legend-item"><div class="swatch" style="background:#9ca3af"></div>Обл. выс. и ср. яркости</div>
-            <div class="legend-item"><div class="swatch" style="background:#7dd3fc"></div>Слоистая облачность</div>
-            <div class="legend-item"><div class="swatch" style="background:#86efac"></div>Осадки слабые</div>
-            <div class="legend-item"><div class="swatch" style="background:#22c55e"></div>Осадки умеренные</div>
-            <div class="legend-item"><div class="swatch" style="background:#15803d"></div>Осадки сильные</div>
-            <div class="legend-item"><div class="swatch" style="background:#facc15"></div>Кучевая облачность</div>
-            <div class="legend-item"><div class="swatch" style="background:#60a5fa"></div>Ливень слабый</div>
-            <div class="legend-item"><div class="swatch" style="background:#3b82f6"></div>Ливень умеренный</div>
-            <div class="legend-item"><div class="swatch" style="background:#1d4ed8"></div>Ливень сильный</div>
-            <div class="legend-item"><div class="swatch" style="background:#fb923c"></div>Гроза (R)</div>
-            <div class="legend-item"><div class="swatch" style="background:#ef4444"></div>Гроза сильная</div>
-            <div class="legend-item"><div class="swatch" style="background:#a16207"></div>Град слабый</div>
-            <div class="legend-item"><div class="swatch" style="background:#854d0e"></div>Град умеренный</div>
-            <div class="legend-item"><div class="swatch" style="background:#713f12"></div>Град сильный</div>
-            <div class="legend-item"><div class="swatch" style="background:#e879f9"></div>Гроза + шквал слаб.</div>
-            <div class="legend-item"><div class="swatch" style="background:#d946ef"></div>Гроза + шквал умер.</div>
-            <div class="legend-item"><div class="swatch" style="background:#a21caf"></div>Гроза + шквал сильн.</div>
-            <div class="legend-item"><div class="swatch" style="background:#1e293b"></div>Смерч</div>
-        </div>
-    </div>
+    <div class="header-btns">
 
-<div class="viewport" id="viewport">
-
-<div id="libreMap"></div>
-    
-<button
-    id="radarLayersButton"
-    class="radar-layers-button"
-    onclick="toggleRadarPanel(event)">
-    ☰
-</button>
-
-<div id="radarLayersPanel" class="radar-layers-panel">
-
-    <div class="radar-panel-header">
-        <span>Слои</span>
-
-        <button id="closeRadarPanel" class="radar-panel-close">
-            ×
+        <button
+            id="btnLegend"
+            onclick="toggleLegend()">
+            Легенда
         </button>
+
+        <button
+            onclick="refreshGif()">
+            Обновить
+        </button>
+
     </div>
-
-<div class="radar-layer-section">
-
-    <div class="radar-layer-title">
-        РАДАР
-    </div>
-
-    <label class="radar-layer-row">
-        <span>
-            <input type="checkbox" id="radarModelToggle">
-            <span>Радар / модель</span>
-        </span>
-    </label>
-
-    <label class="radar-layer-row">
-        <span>
-            <input type="checkbox" id="radarGifToggle">
-            <span>Радарная GIF</span>
-        </span>
-    </label>
 
 </div>
 
-    <div class="radar-layer-section">
 
-        <div class="radar-layer-title">
-            СТАНЦИИ
+<!-- =========================================
+     ЛЕГЕНДА
+     ========================================= -->
+
+<div
+    class="legend"
+    id="legend">
+
+    <div class="legend-title">
+        Радар
+    </div>
+
+    <div class="legend-grid">
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#86efac">
+            </div>
+            Осадки слабые
         </div>
 
-        <label class="radar-layer-row">
-            <span>
-                <input type="checkbox" id="radarCoverageToggle">
-                <span>Зоны покрытия</span>
-            </span>
-        </label>
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#22c55e">
+            </div>
+            Осадки умеренные
+        </div>
 
-        <label class="radar-layer-row">
-            <span>
-                <input type="checkbox" id="radarStationsToggle">
-                <span>Радарные станции</span>
-            </span>
-        </label>
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#15803d">
+            </div>
+            Осадки сильные
+        </div>
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#60a5fa">
+            </div>
+            Ливень слабый
+        </div>
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#3b82f6">
+            </div>
+            Ливень умеренный
+        </div>
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#1d4ed8">
+            </div>
+            Ливень сильный
+        </div>
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#fb923c">
+            </div>
+            Гроза
+        </div>
+
+        <div class="legend-item">
+            <div
+                class="swatch"
+                style="background:#ef4444">
+            </div>
+            Сильная гроза
+        </div>
 
     </div>
 
-    <div id="radarStationsStatus" class="radar-stations-status">
-        Станции: загрузка...
+</div>
+
+
+<!-- =========================================
+     ОСНОВНАЯ ОБЛАСТЬ
+     ========================================= -->
+
+<div
+    class="viewport"
+    id="viewport">
+
+
+    <!-- =====================================
+         КНОПКА СЛОЁВ
+         ===================================== -->
+
+    <button
+        id="radarLayersButton"
+        class="radar-layers-button">
+
+        ☰
+
+    </button>
+
+
+    <!-- =====================================
+         LIBREWXR
+         ===================================== -->
+
+    <div
+        id="libreMap">
     </div>
 
-</div>    
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- ТВОЙ СУЩЕСТВУЮЩИЙ РАДАР -->
+    <!-- =====================================
+         СТАРАЯ GIF
+         ===================================== -->
+
     <img
         id="radar"
         src="https://meteoinfo.ru/hmc-output/rmap/phenomena.gif"
         alt="Радар">
 
+
+    <!-- =====================================
+         ПАНЕЛЬ СЛОЁВ
+         ===================================== -->
+
+    <div
+        id="radarLayersPanel"
+        class="radar-layers-panel">
+
+
+        <div
+            class="radar-panel-header">
+
+            <span>
+                Слои
+            </span>
+
+            <button
+                id="closeRadarPanel"
+                class="radar-panel-close">
+
+                ×
+
+            </button>
+
+        </div>
+
+
+        <!-- =================================
+             РАДАР
+             ================================= -->
+
+        <div
+            class="radar-layer-section">
+
+            <div
+                class="radar-layer-title">
+
+                РАДАР
+
+            </div>
+
+
+            <label
+                class="radar-layer-row">
+
+                <span>
+
+                    <input
+                        type="checkbox"
+                        id="radarModelToggle">
+
+                    <span>
+                        Радар / модель
+                    </span>
+
+                </span>
+
+            </label>
+
+
+            <label
+                class="radar-layer-row">
+
+                <span>
+
+                    <input
+                        type="checkbox"
+                        id="radarGifToggle">
+
+                    <span>
+                        Радарная GIF
+                    </span>
+
+                </span>
+
+            </label>
+
+        </div>
+
+
+        <!-- =================================
+             СТАНЦИИ
+             ================================= -->
+
+        <div
+            class="radar-layer-section">
+
+            <div
+                class="radar-layer-title">
+
+                СТАНЦИИ
+
+            </div>
+
+
+            <label
+                class="radar-layer-row">
+
+                <span>
+
+                    <input
+                        type="checkbox"
+                        id="radarCoverageToggle">
+
+                    <span>
+                        Зоны покрытия
+                    </span>
+
+                </span>
+
+            </label>
+
+
+            <label
+                class="radar-layer-row">
+
+                <span>
+
+                    <input
+                        type="checkbox"
+                        id="radarStationsToggle">
+
+                    <span>
+                        Радарные станции
+                    </span>
+
+                </span>
+
+            </label>
+
+        </div>
+
+
+        <div
+            id="radarStationsStatus"
+            class="radar-stations-status">
+
+            LibreWXR: готов
+
+        </div>
+
+    </div>
+
 </div>
 
-    <div class="bottom-bar">
-        Обновлено:<strong id="updateTime">—</strong>
-    </div>
-<script src="radar-stations.js"></script>
-    
+
+<!-- =========================================
+     НИЖНЯЯ ПАНЕЛЬ
+     ========================================= -->
+
+<div class="bottom-bar">
+
+    Обновлено:
+
+    <strong id="updateTime">
+        —
+    </strong>
+
+</div>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
 <script>
-    const img = document.getElementById('radar');
-    const viewport = document.getElementById('viewport');
-    const legend = document.getElementById('legend');
-    const btnLegend = document.getElementById('btnLegend');
-    const updateTimeEl = document.getElementById('updateTime');
 
-    let scale = 1, rotation = 0, tx = 0, ty = 0;
-    let active = false, panning = false;
-    let startScale = 1, startRotation = 0, startTx = 0, startTy = 0;
-    let startDist = 0, startAngle = 0, focalX = 0, focalY = 0;
-    let lastPanX = 0, lastPanY = 0;
-    let legendOpen = false;
+/* =========================================
+   ОСНОВНЫЕ ЭЛЕМЕНТЫ
+   ========================================= */
 
-    function apply() {
-        const rad = rotation * Math.PI / 180;
-        const a = scale * Math.cos(rad);
-        const b = scale * Math.sin(rad);
-        img.style.transform = `matrix(${a}, ${b}, ${-b}, ${a}, ${tx}, ${ty})`;
-    }
+const img =
+    document.getElementById('radar');
 
-    function formatTime(date) {
-        return String(date.getHours()).padStart(2,'0') + ':' + String(date.getMinutes()).padStart(2,'0');
-    }
+const viewport =
+    document.getElementById('viewport');
 
-    function setUpdateTime() {
-        updateTimeEl.textContent = formatTime(new Date());
-    }
+const libreMapElement =
+    document.getElementById('libreMap');
 
-    function refresh() {
-        img.src = 'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t=' + Date.now();
-        setUpdateTime();
-    }
-
-    function toggleLegend() {
-        legendOpen = !legendOpen;
-        legend.classList.toggle('open', legendOpen);
-        btnLegend.classList.toggle('active', legendOpen);
-    }
-
-    function getPoint(t) {
-        const r = viewport.getBoundingClientRect();
-        return { x: t.clientX - r.left, y: t.clientY - r.top };
-    }
-    function distance(a, b) { return Math.hypot(b.x - a.x, b.y - a.y); }
-    function angle(a, b) { return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI; }
-
-   document.getElementById('radarLayersButton').addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    document.getElementById('radarLayersPanel').classList.add('open');
-}, { passive: false }); 
-
-    viewport.addEventListener('touchstart', e => {
-        e.preventDefault();
-        if (e.touches.length === 1) {
-            active = false; panning = true;
-            const p = getPoint(e.touches[0]);
-            lastPanX = p.x; lastPanY = p.y;
-        } else if (e.touches.length === 2) {
-            panning = false; active = true;
-            const p1 = getPoint(e.touches[0]), p2 = getPoint(e.touches[1]);
-            focalX = (p1.x + p2.x) / 2; focalY = (p1.y + p2.y) / 2;
-            startDist = distance(p1, p2); startAngle = angle(p1, p2);
-            startScale = scale; startRotation = rotation;
-            startTx = tx; startTy = ty;
-        }
-    }, { passive: false });
-
-    viewport.addEventListener('touchmove', e => {
-        e.preventDefault();
-        if (panning && e.touches.length === 1) {
-            const p = getPoint(e.touches[0]);
-            tx += p.x - lastPanX; ty += p.y - lastPanY;
-            lastPanX = p.x; lastPanY = p.y;
-            apply();
-            return;
-        }
-        if (active && e.touches.length === 2) {
-            const p1 = getPoint(e.touches[0]), p2 = getPoint(e.touches[1]);
-            let newScale = startScale * (distance(p1, p2) / startDist);
-            newScale = Math.max(0.25, Math.min(newScale, 18));
-            const newRotation = startRotation + (angle(p1, p2) - startAngle);
-
-            const rad0 = startRotation * Math.PI / 180;
-            const cos0 = Math.cos(rad0), sin0 = Math.sin(rad0);
-            const dx = focalX - startTx, dy = focalY - startTy;
-            const localX = (dx * cos0 + dy * sin0) / startScale;
-            const localY = (-dx * sin0 + dy * cos0) / startScale;
-
-            const rad1 = newRotation * Math.PI / 180;
-            const cos1 = Math.cos(rad1), sin1 = Math.sin(rad1);
-            tx = focalX - (localX * newScale * cos1 - localY * newScale * sin1);
-            ty = focalY - (localX * newScale * sin1 + localY * newScale * cos1);
-
-            scale = newScale; rotation = newRotation;
-            apply();
-        }
-    }, { passive: false });
-
-    viewport.addEventListener('touchend', e => {
-        if (e.touches.length < 2) active = false;
-        if (e.touches.length === 0) panning = false;
-        if (e.touches.length === 1) {
-            panning = true;
-            const p = getPoint(e.touches[0]);
-            lastPanX = p.x; lastPanY = p.y;
-        }
-    });
-
-    viewport.addEventListener('touchcancel', () => { active = false; panning = false; });
-
-    setInterval(refresh, 4 * 60 * 1000);
-
-    img.onload = () => {
-        setUpdateTime();
-        setTimeout(() => {
-            const rect = viewport.getBoundingClientRect();
-            const w = img.naturalWidth, h = img.naturalHeight;
-            if (!w || !h) return;
-            scale = Math.min(rect.width / w, rect.height / h) * 0.95;
-            tx = (rect.width - w * scale) / 2;
-            ty = (rect.height - h * scale) / 2;
-            rotation = 0;
-            apply();
-        }, 60);
-    };
-
-    setUpdateTime();
-    apply();
-        /* =========================================
-       ПАНЕЛЬ СЛОЁВ
-       ========================================= */
+const radarLayersButton =
+    document.getElementById('radarLayersButton');
 
 const radarLayersPanel =
     document.getElementById('radarLayersPanel');
@@ -581,110 +875,552 @@ const radarLayersPanel =
 const closeRadarPanel =
     document.getElementById('closeRadarPanel');
 
+const radarModelToggle =
+    document.getElementById('radarModelToggle');
 
-function toggleRadarPanel(e) {
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
+const radarGifToggle =
+    document.getElementById('radarGifToggle');
 
-    const panel = document.getElementById('radarLayersPanel');
-
-    panel.classList.toggle('open');
-}
+const updateTimeEl =
+    document.getElementById('updateTime');
 
 
-closeRadarPanel.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    radarLayersPanel.classList.remove('open');
-}, { passive: false });
-
-
-closeRadarPanel.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    radarLayersPanel.classList.remove('open');
-});
 /* =========================================
-   LIBREWXR — РАДАР / МОДЕЛЬ
+   СОСТОЯНИЕ
    ========================================= */
 
 let libreMap = null;
+
 let libreRadarLayer = null;
 
-async function openLibreWXR() {
+let libreInitialized = false;
 
-    const mapElement = document.getElementById('libreMap');
 
-    mapElement.classList.add('open');
+/* =========================================
+   GIF
+   ========================================= */
 
-    // Скрываем старую GIF
-    img.style.display = 'none';
+function refreshGif() {
 
-    if (!libreMap) {
+    img.src =
+        'https://meteoinfo.ru/hmc-output/rmap/phenomena.gif?t='
+        + Date.now();
 
-        libreMap = L.map('libreMap', {
-            zoomControl: false,
-            attributionControl: true,
-            worldCopyJump: true
-        }).setView([55, 50], 4);
+    updateTime();
 
-        // Чёрная карта мира
-        L.tileLayer(
-            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-            {
-                maxZoom: 19,
-                subdomains: 'abcd',
-                attribution: '&copy; OpenStreetMap &copy; CARTO'
-            }
-        ).addTo(libreMap);
+}
+
+
+/* =========================================
+   ВРЕМЯ
+   ========================================= */
+
+function updateTime() {
+
+    const now =
+        new Date();
+
+    const h =
+        String(now.getHours())
+        .padStart(2, '0');
+
+    const m =
+        String(now.getMinutes())
+        .padStart(2, '0');
+
+    updateTimeEl.textContent =
+        h + ':' + m;
+}
+
+
+/* =========================================
+   ЛЕГЕНДА
+   ========================================= */
+
+let legendOpen = false;
+
+function toggleLegend() {
+
+    legendOpen =
+        !legendOpen;
+
+    document
+        .getElementById('legend')
+        .classList
+        .toggle(
+            'open',
+            legendOpen
+        );
+
+    document
+        .getElementById('btnLegend')
+        .classList
+        .toggle(
+            'active',
+            legendOpen
+        );
+}
+
+
+/* =========================================
+   ПАНЕЛЬ СЛОЁВ
+   ========================================= */
+
+radarLayersButton.addEventListener(
+    'pointerdown',
+    function(e) {
+
+        e.preventDefault();
+
+        e.stopPropagation();
+
+        radarLayersPanel
+            .classList
+            .add('open');
+
     }
+);
+
+
+closeRadarPanel.addEventListener(
+    'pointerdown',
+    function(e) {
+
+        e.preventDefault();
+
+        e.stopPropagation();
+
+        radarLayersPanel
+            .classList
+            .remove('open');
+
+    }
+);
+
+
+/* =========================================
+   LIBREWXR КАРТА
+   ========================================= */
+
+function createLibreMap() {
+
+    if (libreMap)
+        return;
+
+
+    libreMap = L.map(
+        'libreMap',
+        {
+            zoomControl: false,
+
+            attributionControl: true,
+
+            worldCopyJump: true,
+
+            minZoom: 2,
+
+            maxZoom: 12
+        }
+    );
+
+
+    libreMap.setView(
+        [55, 50],
+        4
+    );
+
+
+    /* Тёмная карта мира */
+
+    L.tileLayer(
+
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+
+        {
+
+            maxZoom: 19,
+
+            subdomains:
+                'abcd',
+
+            attribution:
+                '&copy; OpenStreetMap &copy; CARTO'
+
+        }
+
+    ).addTo(libreMap);
+
+
+    libreInitialized = true;
+
+
+    setTimeout(
+        function() {
+
+            libreMap.invalidateSize();
+
+        },
+        200
+    );
+}
+
+
+/* =========================================
+   ЗАГРУЗКА LIBREWXR
+   ========================================= */
+
+async function loadLibreWXR() {
+
+    createLibreMap();
+
+
+    const status =
+        document.getElementById(
+            'radarStationsStatus'
+        );
+
+
+    status.textContent =
+        'LibreWXR: загрузка...';
+
 
     try {
 
-        const response = await fetch(
-            'https://api.librewxr.net/public/weather-maps.json'
-        );
+        const response =
+            await fetch(
+                'https://api.librewxr.net/public/weather-maps.json',
+                {
+                    cache: 'no-store'
+                }
+            );
 
-        const data = await response.json();
 
-        const frames = data.radar?.past || [];
+        if (!response.ok) {
+
+            throw new Error(
+                'HTTP ' +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        /*
+         * Берём последний доступный
+         * радарный кадр.
+         */
+
+        const frames =
+            data.radar &&
+            data.radar.past
+                ? data.radar.past
+                : [];
+
 
         if (!frames.length) {
-            console.log('LibreWXR: нет радарных кадров');
+
+            status.textContent =
+                'LibreWXR: радарные данные отсутствуют';
+
             return;
         }
 
-        const frame = frames[frames.length - 1];
+
+        const frame =
+            frames[
+                frames.length - 1
+            ];
+
+
+        /*
+         * Удаляем старый слой
+         */
 
         if (libreRadarLayer) {
-            libreMap.removeLayer(libreRadarLayer);
+
+            libreMap.removeLayer(
+                libreRadarLayer
+            );
+
+            libreRadarLayer = null;
         }
 
-        libreRadarLayer = L.tileLayer(
+
+        /*
+         * Создаём слой осадков.
+         */
+
+        const tileUrl =
             data.host +
             frame.path +
-            '/256/{z}/{x}/{y}/10/1_1.png?arrows=light',
-            {
-                opacity: 1,
-                maxZoom: 12,
-                tileSize: 256
-            }
+            '/256/{z}/{x}/{y}/10/1_1.png';
+
+
+        libreRadarLayer =
+            L.tileLayer(
+                tileUrl,
+                {
+
+                    opacity: 1,
+
+                    maxZoom: 12,
+
+                    tileSize: 256,
+
+                    crossOrigin: true
+
+                }
+            );
+
+
+        libreRadarLayer.addTo(
+            libreMap
         );
 
-        libreRadarLayer.addTo(libreMap);
 
-        setTimeout(() => {
-            libreMap.invalidateSize();
-        }, 100);
+        status.textContent =
+            'LibreWXR: радар загружен';
 
-    } catch (error) {
-        console.error('Ошибка LibreWXR:', error);
+
+        setTimeout(
+            function() {
+
+                libreMap.invalidateSize();
+
+            },
+            150
+        );
+
+
+    } catch(error) {
+
+        console.error(
+            'LibreWXR:',
+            error
+        );
+
+
+        status.textContent =
+            'LibreWXR: ошибка загрузки';
     }
-}    
+}
+
+
+/* =========================================
+   ОТКРЫТЬ РАДАР / МОДЕЛЬ
+   ========================================= */
+
+async function openRadarModel() {
+
+    /*
+     * Скрываем GIF
+     */
+
+    img.style.display =
+        'none';
+
+
+    /*
+     * Показываем карту
+     */
+
+    libreMapElement
+        .classList
+        .add('open');
+
+
+    /*
+     * Загружаем карту
+     */
+
+    await loadLibreWXR();
+
+
+    /*
+     * Обновляем размер
+     */
+
+    if (libreMap) {
+
+        setTimeout(
+            function() {
+
+                libreMap.invalidateSize();
+
+            },
+            100
+        );
+    }
+}
+
+
+/* =========================================
+   ОТКРЫТЬ GIF
+   ========================================= */
+
+function openRadarGif() {
+
+    /*
+     * Скрываем LibreWXR
+     */
+
+    libreMapElement
+        .classList
+        .remove('open');
+
+
+    /*
+     * Показываем GIF
+     */
+
+    img.style.display =
+        'block';
+
+
+    /*
+     * Если карта была создана —
+     * оставляем её загруженной.
+     */
+
+    updateTime();
+}
+
+
+/* =========================================
+   ПЕРЕКЛЮЧАТЕЛЬ
+   ========================================= */
+
+radarModelToggle.addEventListener(
+    'change',
+    async function() {
+
+        if (this.checked) {
+
+            /*
+             * Выключаем GIF
+             */
+
+            radarGifToggle.checked =
+                false;
+
+
+            /*
+             * Открываем LibreWXR
+             */
+
+            await openRadarModel();
+
+        }
+
+    }
+);
+
+
+radarGifToggle.addEventListener(
+    'change',
+    function() {
+
+        if (this.checked) {
+
+            /*
+             * Выключаем
+             * Радар / модель
+             */
+
+            radarModelToggle.checked =
+                false;
+
+
+            /*
+             * Открываем GIF
+             */
+
+            openRadarGif();
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   СТАРТ
+   ========================================= */
+
+/*
+ * По умолчанию показываем GIF.
+ */
+
+radarGifToggle.checked =
+    true;
+
+radarModelToggle.checked =
+    false;
+
+openRadarGif();
+
+updateTime();
+
+
+/* =========================================
+   АВТООБНОВЛЕНИЕ GIF
+   ========================================= */
+
+setInterval(
+    function() {
+
+        /*
+         * Обновляем GIF только если
+         * она сейчас активна.
+         */
+
+        if (
+            radarGifToggle.checked
+        ) {
+
+            refreshGif();
+
+        }
+
+    },
+    4 * 60 * 1000
+);
+
+
+/* =========================================
+   ЗАКРЫТИЕ ПАНЕЛИ ПРИ КЛИКЕ
+   ВНЕ ПАНЕЛИ
+   ========================================= */
+
+viewport.addEventListener(
+    'pointerdown',
+    function(e) {
+
+        if (
+            radarLayersPanel
+                .classList
+                .contains('open')
+            &&
+            !radarLayersPanel
+                .contains(e.target)
+            &&
+            e.target !== radarLayersButton
+        ) {
+
+            radarLayersPanel
+                .classList
+                .remove('open');
+
+        }
+
+    }
+);
+
 </script>
+
 </body>
 </html>
