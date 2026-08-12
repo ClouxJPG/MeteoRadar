@@ -286,7 +286,38 @@
     font-size: 11px;
 
     line-height: 1.5;
-}       
+}
+.radar-stations-status {
+    padding: 14px;
+
+    color: #64748b;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+/* КАРТА LIBREWXR */
+#libreMap {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: #05070b;
+    display: none;
+}
+
+#libreMap.open {
+    display: block;
+}
+
+#libreMap .leaflet-tile {
+    filter: brightness(0.55) contrast(1.15) saturate(0.7);
+}
+
+.leaflet-control-zoom {
+    display: none;
+}
+      
     </style>
 </head>
 <body>
@@ -324,6 +355,9 @@
     </div>
 
 <div class="viewport" id="viewport">
+
+<div id="libreMap"></div>
+    
 <button
     id="radarLayersButton"
     class="radar-layers-button"
@@ -391,7 +425,8 @@
 
 </div>    
 
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- ТВОЙ СУЩЕСТВУЮЩИЙ РАДАР -->
     <img
         id="radar"
@@ -573,6 +608,83 @@ closeRadarPanel.addEventListener('click', function(e) {
 
     radarLayersPanel.classList.remove('open');
 });
+/* =========================================
+   LIBREWXR — РАДАР / МОДЕЛЬ
+   ========================================= */
+
+let libreMap = null;
+let libreRadarLayer = null;
+
+async function openLibreWXR() {
+
+    const mapElement = document.getElementById('libreMap');
+
+    mapElement.classList.add('open');
+
+    // Скрываем старую GIF
+    img.style.display = 'none';
+
+    if (!libreMap) {
+
+        libreMap = L.map('libreMap', {
+            zoomControl: false,
+            attributionControl: true,
+            worldCopyJump: true
+        }).setView([55, 50], 4);
+
+        // Чёрная карта мира
+        L.tileLayer(
+            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+            {
+                maxZoom: 19,
+                subdomains: 'abcd',
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }
+        ).addTo(libreMap);
+    }
+
+    try {
+
+        const response = await fetch(
+            'https://api.librewxr.net/public/weather-maps.json'
+        );
+
+        const data = await response.json();
+
+        const frames = data.radar?.past || [];
+
+        if (!frames.length) {
+            console.log('LibreWXR: нет радарных кадров');
+            return;
+        }
+
+        const frame = frames[frames.length - 1];
+
+        if (libreRadarLayer) {
+            libreMap.removeLayer(libreRadarLayer);
+        }
+
+        libreRadarLayer = L.tileLayer(
+            data.host +
+            frame.path +
+            '/256/{z}/{x}/{y}/10/1_1.png?arrows=light',
+            {
+                opacity: 1,
+                maxZoom: 12,
+                tileSize: 256
+            }
+        );
+
+        libreRadarLayer.addTo(libreMap);
+
+        setTimeout(() => {
+            libreMap.invalidateSize();
+        }, 100);
+
+    } catch (error) {
+        console.error('Ошибка LibreWXR:', error);
+    }
+}    
 </script>
 </body>
 </html>
