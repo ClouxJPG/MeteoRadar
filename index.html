@@ -576,6 +576,36 @@
 
     setUpdateTime();
     apply();
+        /* =========================================
+       ПАНЕЛЬ СЛОЁВ
+       ========================================= */
+
+    const radarLayersButton =
+        document.getElementById('radarLayersButton');
+
+    const radarLayersPanel =
+        document.getElementById('radarLayersPanel');
+
+    const closeRadarPanel =
+        document.getElementById('closeRadarPanel');
+
+
+    radarLayersButton.addEventListener('click', function(e) {
+
+        e.stopPropagation();
+
+        radarLayersPanel.classList.toggle('open');
+
+    });
+
+
+    closeRadarPanel.addEventListener('click', function(e) {
+
+        e.stopPropagation();
+
+        radarLayersPanel.classList.remove('open');
+
+    });
 </script>
 </body>
 </html>
