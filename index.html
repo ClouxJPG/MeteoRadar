@@ -3,151 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nowcast Radar Test</title>
-
+<title>Nowcast Token Test</title>
 <style>
 body{
-    margin:0;
-    padding:20px;
     background:#111;
     color:#fff;
-    font-family:Arial,sans-serif;
+    font-family:Arial;
+    padding:20px;
 }
-
 button{
     width:100%;
     padding:15px;
+    font-size:18px;
     border:0;
     border-radius:10px;
-    background:#2878ff;
-    color:white;
-    font-size:17px;
 }
-
-#status{
+#out{
     margin-top:20px;
     padding:15px;
-    background:#1d1d1d;
+    background:#222;
     border-radius:10px;
     white-space:pre-wrap;
-    word-break:break-word;
+    word-break:break-all;
 }
 </style>
 </head>
 
 <body>
 
-<h2>Nowcast Radar Test</h2>
+<h2>Nowcast API test</h2>
 
-<button onclick="loadRadar()">Получить данные радара</button>
+<button onclick="test()">Проверить /get_token</button>
 
-<div id="status">Нажми кнопку.</div>
+<div id="out">Ожидание...</div>
 
 <script>
+async function test(){
 
-async function loadRadar(){
+    const out=document.getElementById("out");
 
-    const status = document.getElementById("status");
+    try{
 
-    status.textContent = "Получаем token...";
+        out.textContent="Запрос к Nowcast...";
 
-    try {
-
-        // 1. Получаем token
-        const tokenResponse = await fetch("/get_token");
-
-        if(!tokenResponse.ok){
-            throw new Error(
-                "get_token HTTP " + tokenResponse.status
-            );
-        }
-
-        const tokenData = await tokenResponse.text();
-
-        console.log("TOKEN:", tokenData);
-
-        // Иногда endpoint возвращает просто строку,
-        // иногда JSON.
-        let token = tokenData.trim();
-
-        try {
-            const json = JSON.parse(tokenData);
-
-            if(typeof json === "string"){
-                token = json;
+        const r=await fetch(
+            "http://nowcast.ru/get_token",
+            {
+                method:"GET"
             }
+        );
 
-            if(json.token){
-                token = json.token;
-            }
+        const text=await r.text();
 
-        } catch(e){}
+        out.textContent=
+            "HTTP: "+r.status+
+            "\n\nОтвет:\n"+
+            text;
 
-        if(!token){
-            throw new Error("Token пустой");
-        }
+    }catch(e){
 
-        status.textContent =
-            "Token получен.\n\nЗапрашиваем радар...";
-
-        // 2. Текущее время
-        const time = new Date().toISOString();
-
-        // 3. Запрашиваем DBZ
-        const url =
-            "/vector_wsgi" +
-            "?time=" + encodeURIComponent(time) +
-            "&title=" +
-            encodeURIComponent(
-                "bufr_dbz1,bufr_novosib_dbz1,bufr_vlad_dbz1"
-            );
-
-        const radarResponse = await fetch(url);
-
-        if(!radarResponse.ok){
-            throw new Error(
-                "vector_wsgi HTTP " +
-                radarResponse.status
-            );
-        }
-
-        // 4. Получаем JSON
-        const radarData = await radarResponse.json();
-
-        // 5. Считаем точки
-        const count =
-            Array.isArray(radarData)
-            ? radarData.length
-            : 0;
-
-        status.textContent =
-            "РАДАР ПОЛУЧЕН\n\n" +
-            "HTTP: " + radarResponse.status + "\n" +
-            "Время: " + time + "\n" +
-            "Точек: " + count + "\n\n" +
-            "Первые данные:\n" +
-            JSON.stringify(
-                radarData.slice(0,5),
-                null,
-                2
-            );
-
-        console.log("RADAR DATA:", radarData);
-
-    } catch(error){
-
-        console.error(error);
-
-        status.textContent =
-            "ОШИБКА\n\n" +
-            error.message +
-            "\n\nЕсли это CORS — значит браузер " +
-            "не разрешает запрос с нашего сайта к Nowcast.";
+        out.textContent=
+            "ОШИБКА:\n\n"+
+            e.name+
+            "\n"+
+            e.message;
 
     }
-
 }
-
 </script>
 
 </body>
